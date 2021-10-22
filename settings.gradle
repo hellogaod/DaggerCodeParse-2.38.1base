@@ -8,3 +8,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "DaggerCodeParse"
 include ':app'
+include ':dagger'
