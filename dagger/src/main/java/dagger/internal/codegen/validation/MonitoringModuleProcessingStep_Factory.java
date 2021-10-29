@@ -21,20 +21,26 @@ public final class MonitoringModuleProcessingStep_Factory implements Factory<Mon
 
     private final Provider<XMessager> messagerProvider;
 
-    public MonitoringModuleProcessingStep_Factory(Provider<XMessager> messagerProvider) {
+    private final Provider<MonitoringModuleGenerator> monitoringModuleGeneratorProvider;
+
+    public MonitoringModuleProcessingStep_Factory(Provider<XMessager> messagerProvider,
+                                                  Provider<MonitoringModuleGenerator> monitoringModuleGeneratorProvider) {
         this.messagerProvider = messagerProvider;
+        this.monitoringModuleGeneratorProvider = monitoringModuleGeneratorProvider;
     }
 
     @Override
     public MonitoringModuleProcessingStep get() {
-        return newInstance(messagerProvider.get());
+        return newInstance(messagerProvider.get(), monitoringModuleGeneratorProvider.get());
     }
 
-    public static MonitoringModuleProcessingStep_Factory create(Provider<XMessager> messagerProvider) {
-        return new MonitoringModuleProcessingStep_Factory(messagerProvider);
+    public static MonitoringModuleProcessingStep_Factory create(Provider<XMessager> messagerProvider,
+                                                                Provider<MonitoringModuleGenerator> monitoringModuleGeneratorProvider) {
+        return new MonitoringModuleProcessingStep_Factory(messagerProvider, monitoringModuleGeneratorProvider);
     }
 
-    public static MonitoringModuleProcessingStep newInstance(XMessager messager) {
-        return new MonitoringModuleProcessingStep(messager);
+    public static MonitoringModuleProcessingStep newInstance(XMessager messager,
+                                                             Object monitoringModuleGenerator) {
+        return new MonitoringModuleProcessingStep(messager, (MonitoringModuleGenerator) monitoringModuleGenerator);
     }
 }

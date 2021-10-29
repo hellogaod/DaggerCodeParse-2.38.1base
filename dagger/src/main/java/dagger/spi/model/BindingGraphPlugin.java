@@ -1,4 +1,4 @@
-package dagger.spi;
+package dagger.spi.model;
 
 /**
  * A pluggable visitor for {@link BindingGraph}.

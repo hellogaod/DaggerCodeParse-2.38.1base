@@ -19,23 +19,35 @@ import dagger.internal.Factory;
 })
 public final class BindsInstanceProcessingStep_Factory implements Factory<BindsInstanceProcessingStep> {
 
+    private final Provider<BindsInstanceMethodValidator> methodValidatorProvider;
+
+    private final Provider<BindsInstanceParameterValidator> parameterValidatorProvider;
+
     private final Provider<XMessager> messagerProvider;
 
-    public BindsInstanceProcessingStep_Factory(Provider<XMessager> messagerProvider) {
-
+    public BindsInstanceProcessingStep_Factory(
+            Provider<BindsInstanceMethodValidator> methodValidatorProvider,
+            Provider<BindsInstanceParameterValidator> parameterValidatorProvider,
+            Provider<XMessager> messagerProvider) {
+        this.methodValidatorProvider = methodValidatorProvider;
+        this.parameterValidatorProvider = parameterValidatorProvider;
         this.messagerProvider = messagerProvider;
     }
 
     @Override
     public BindsInstanceProcessingStep get() {
-        return newInstance(messagerProvider.get());
+        return newInstance(methodValidatorProvider.get(), parameterValidatorProvider.get(), messagerProvider.get());
     }
 
-    public static BindsInstanceProcessingStep_Factory create(Provider<XMessager> messagerProvider) {
-        return new BindsInstanceProcessingStep_Factory(messagerProvider);
+    public static BindsInstanceProcessingStep_Factory create(
+            Provider<BindsInstanceMethodValidator> methodValidatorProvider,
+            Provider<BindsInstanceParameterValidator> parameterValidatorProvider,
+            Provider<XMessager> messagerProvider) {
+        return new BindsInstanceProcessingStep_Factory(methodValidatorProvider, parameterValidatorProvider, messagerProvider);
     }
 
-    public static BindsInstanceProcessingStep newInstance(XMessager messager) {
-        return new BindsInstanceProcessingStep(messager);
+    public static BindsInstanceProcessingStep newInstance(Object methodValidator,
+                                                          Object parameterValidator, XMessager messager) {
+        return new BindsInstanceProcessingStep((BindsInstanceMethodValidator) methodValidator, (BindsInstanceParameterValidator) parameterValidator, messager);
     }
 }

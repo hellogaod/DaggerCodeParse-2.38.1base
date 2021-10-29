@@ -11,4 +11,6 @@ public abstract class CompilerOptions {
     public abstract boolean formatGeneratedSource();
 
     public abstract boolean headerCompilation();
+
+    public abstract boolean experimentalDaggerErrorMessages();
 }

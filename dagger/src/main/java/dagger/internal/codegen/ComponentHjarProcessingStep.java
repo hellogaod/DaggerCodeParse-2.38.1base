@@ -4,6 +4,11 @@ import javax.inject.Inject;
 
 import androidx.room.compiler.processing.XMessager;
 import androidx.room.compiler.processing.XTypeElement;
+import dagger.internal.codegen.base.SourceFileGenerator;
+import dagger.internal.codegen.binding.ComponentDescriptor;
+import dagger.internal.codegen.binding.ComponentDescriptorFactory;
+import dagger.internal.codegen.validation.ComponentCreatorValidator;
+import dagger.internal.codegen.validation.ComponentValidator;
 import dagger.internal.codegen.validation.TypeCheckingProcessingStep;
 
 /**
@@ -26,11 +31,22 @@ import dagger.internal.codegen.validation.TypeCheckingProcessingStep;
 final class ComponentHjarProcessingStep extends TypeCheckingProcessingStep<XTypeElement> {
 
     private final XMessager messager;
+    private final ComponentValidator componentValidator;
+    private final ComponentCreatorValidator creatorValidator;
+    private final ComponentDescriptorFactory componentDescriptorFactory;
+    private final SourceFileGenerator<ComponentDescriptor> componentGenerator;
 
     @Inject
     ComponentHjarProcessingStep(
-            XMessager messager
-    ) {
+            XMessager messager,
+            ComponentValidator componentValidator,
+            ComponentCreatorValidator creatorValidator,
+            ComponentDescriptorFactory componentDescriptorFactory,
+            SourceFileGenerator<ComponentDescriptor> componentGenerator) {
         this.messager = messager;
+        this.componentValidator = componentValidator;
+        this.creatorValidator = creatorValidator;
+        this.componentDescriptorFactory = componentDescriptorFactory;
+        this.componentGenerator = componentGenerator;
     }
 }

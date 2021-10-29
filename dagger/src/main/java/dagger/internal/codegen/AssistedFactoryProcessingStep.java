@@ -6,6 +6,7 @@ import javax.lang.model.SourceVersion;
 import androidx.room.compiler.processing.XFiler;
 import androidx.room.compiler.processing.XMessager;
 import androidx.room.compiler.processing.XTypeElement;
+import dagger.internal.codegen.binding.BindingFactory;
 import dagger.internal.codegen.langmodel.DaggerElements;
 import dagger.internal.codegen.langmodel.DaggerTypes;
 import androidx.room.compiler.processing.XProcessingEnv;
@@ -23,6 +24,7 @@ final class AssistedFactoryProcessingStep extends TypeCheckingProcessingStep<XTy
     private final SourceVersion sourceVersion;
     private final DaggerElements elements;
     private final DaggerTypes types;
+    private final BindingFactory bindingFactory;
 
     @Inject
     AssistedFactoryProcessingStep(
@@ -31,12 +33,15 @@ final class AssistedFactoryProcessingStep extends TypeCheckingProcessingStep<XTy
             XFiler filer,
             SourceVersion sourceVersion,
             DaggerElements elements,
-            DaggerTypes types) {
+            DaggerTypes types,
+            BindingFactory bindingFactory
+    ) {
         this.processingEnv = processingEnv;
         this.messager = messager;
         this.filer = filer;
         this.sourceVersion = sourceVersion;
         this.elements = elements;
         this.types = types;
+        this.bindingFactory = bindingFactory;
     }
 }

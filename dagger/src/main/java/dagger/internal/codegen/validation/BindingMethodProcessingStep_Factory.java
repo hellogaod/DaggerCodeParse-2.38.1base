@@ -21,20 +21,26 @@ public final class BindingMethodProcessingStep_Factory implements Factory<Bindin
 
     private final Provider<XMessager> messagerProvider;
 
-    public BindingMethodProcessingStep_Factory(Provider<XMessager> messagerProvider) {
+    private final Provider<AnyBindingMethodValidator> anyBindingMethodValidatorProvider;
+
+    public BindingMethodProcessingStep_Factory(Provider<XMessager> messagerProvider,
+                                               Provider<AnyBindingMethodValidator> anyBindingMethodValidatorProvider) {
         this.messagerProvider = messagerProvider;
+        this.anyBindingMethodValidatorProvider = anyBindingMethodValidatorProvider;
     }
 
     @Override
     public BindingMethodProcessingStep get() {
-        return newInstance(messagerProvider.get());
+        return newInstance(messagerProvider.get(), anyBindingMethodValidatorProvider.get());
     }
 
-    public static BindingMethodProcessingStep_Factory create(Provider<XMessager> messagerProvider) {
-        return new BindingMethodProcessingStep_Factory(messagerProvider);
+    public static BindingMethodProcessingStep_Factory create(Provider<XMessager> messagerProvider,
+                                                             Provider<AnyBindingMethodValidator> anyBindingMethodValidatorProvider) {
+        return new BindingMethodProcessingStep_Factory(messagerProvider, anyBindingMethodValidatorProvider);
     }
 
-    public static BindingMethodProcessingStep newInstance(XMessager messager) {
-        return new BindingMethodProcessingStep(messager);
+    public static BindingMethodProcessingStep newInstance(XMessager messager,
+                                                          AnyBindingMethodValidator anyBindingMethodValidator) {
+        return new BindingMethodProcessingStep(messager, anyBindingMethodValidator);
     }
 }

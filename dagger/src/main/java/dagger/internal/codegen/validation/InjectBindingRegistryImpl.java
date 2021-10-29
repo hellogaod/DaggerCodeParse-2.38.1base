@@ -7,7 +7,9 @@ import javax.inject.Singleton;
 import androidx.room.compiler.processing.XMessager;
 import dagger.Component;
 import dagger.Provides;
+import dagger.internal.codegen.binding.BindingFactory;
 import dagger.internal.codegen.binding.InjectBindingRegistry;
+import dagger.internal.codegen.binding.KeyFactory;
 import dagger.internal.codegen.compileroption.CompilerOptions;
 import dagger.internal.codegen.langmodel.DaggerElements;
 import dagger.internal.codegen.langmodel.DaggerTypes;
@@ -26,9 +28,9 @@ final class InjectBindingRegistryImpl implements InjectBindingRegistry {
     private final DaggerTypes types;
     private final XMessager messager;
     private final InjectValidator injectValidator;
-    //    private final InjectValidator injectValidatorWhenGeneratingCode;
-//    private final KeyFactory keyFactory;
-//    private final BindingFactory bindingFactory;
+//    private final InjectValidator injectValidatorWhenGeneratingCode;
+    private final KeyFactory keyFactory;
+    private final BindingFactory bindingFactory;
     private final CompilerOptions compilerOptions;
 
     @Inject
@@ -37,8 +39,8 @@ final class InjectBindingRegistryImpl implements InjectBindingRegistry {
             DaggerTypes types,
             XMessager messager,
             InjectValidator injectValidator,
-//            KeyFactory keyFactory,
-//            BindingFactory bindingFactory,
+            KeyFactory keyFactory,
+            BindingFactory bindingFactory,
             CompilerOptions compilerOptions) {
 
         this.elements = elements;
@@ -46,8 +48,8 @@ final class InjectBindingRegistryImpl implements InjectBindingRegistry {
         this.messager = messager;
         this.injectValidator = injectValidator;
 //        this.injectValidatorWhenGeneratingCode = injectValidator.whenGeneratingCode();
-//        this.keyFactory = keyFactory;
-//        this.bindingFactory = bindingFactory;
+        this.keyFactory = keyFactory;
+        this.bindingFactory = bindingFactory;
         this.compilerOptions = compilerOptions;
     }
 }

@@ -12,11 +12,14 @@ import androidx.room.compiler.processing.XTypeElement;
 public final class MonitoringModuleProcessingStep extends TypeCheckingProcessingStep<XTypeElement> {
 
     private final XMessager messager;
+    private final MonitoringModuleGenerator monitoringModuleGenerator;
 
     @Inject
     MonitoringModuleProcessingStep(
-            XMessager messager
+            XMessager messager,
+            MonitoringModuleGenerator monitoringModuleGenerator
     ) {
         this.messager = messager;
+        this.monitoringModuleGenerator = monitoringModuleGenerator;
     }
 }

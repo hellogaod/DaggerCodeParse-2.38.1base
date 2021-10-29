@@ -30,15 +30,18 @@ import dagger.internal.codegen.base.SourceFileGenerator;
 import dagger.internal.codegen.binding.InjectBindingRegistry;
 import dagger.internal.codegen.binding.MembersInjectionBinding;
 import dagger.internal.codegen.binding.ProvisionBinding;
+import dagger.internal.codegen.bindinggraphvalidation.BindingGraphValidationModule;
 import dagger.internal.codegen.compileroption.CompilerOptions;
+import dagger.internal.codegen.componentgenerator.ComponentGeneratorModule;
 import dagger.internal.codegen.validation.BindingMethodProcessingStep;
+import dagger.internal.codegen.validation.BindingMethodValidatorsModule;
 import dagger.internal.codegen.validation.BindsInstanceProcessingStep;
 import dagger.internal.codegen.validation.ExternalBindingGraphPlugins;
 import dagger.internal.codegen.validation.InjectBindingRegistryModule;
 import dagger.internal.codegen.validation.MonitoringModuleProcessingStep;
 import dagger.internal.codegen.validation.MultibindingAnnotationsProcessingStep;
 import dagger.internal.codegen.validation.ValidationBindingGraphPlugins;
-import dagger.spi.BindingGraphPlugin;
+import dagger.spi.model.BindingGraphPlugin;
 
 import static net.ltgt.gradle.incap.IncrementalAnnotationProcessorType.ISOLATING;
 
@@ -128,6 +131,9 @@ public class ComponentProcessor extends JavacBasicAnnotationProcessor {
                     SourceFileGeneratorsModule.class,
                     ProcessingStepsModule.class,
                     ProcessingEnvironmentModule.class,
+                    ComponentGeneratorModule.class,
+                    BindingMethodValidatorsModule.class,
+                    BindingGraphValidationModule.class
             }
     )
     interface ProcessorComponent {

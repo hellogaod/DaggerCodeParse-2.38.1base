@@ -13,11 +13,15 @@ import androidx.room.compiler.processing.XMessager;
 public final class MultibindingAnnotationsProcessingStep
         extends TypeCheckingProcessingStep<XExecutableElement> {
 
+    private final AnyBindingMethodValidator anyBindingMethodValidator;
     private final XMessager messager;
 
     @Inject
     MultibindingAnnotationsProcessingStep(
-            XMessager messager) {
+            AnyBindingMethodValidator anyBindingMethodValidator,
+            XMessager messager
+    ) {
+        this.anyBindingMethodValidator = anyBindingMethodValidator;
         this.messager = messager;
     }
 }

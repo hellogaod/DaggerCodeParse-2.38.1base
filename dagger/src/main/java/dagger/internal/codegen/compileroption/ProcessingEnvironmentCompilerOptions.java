@@ -1,13 +1,17 @@
 package dagger.internal.codegen.compileroption;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
 import androidx.room.compiler.processing.XMessager;
+import dagger.internal.codegen.langmodel.DaggerElements;
 
 import static dagger.internal.codegen.compileroption.ProcessingEnvironmentCompilerOptions.KeyOnlyOption.HEADER_COMPILATION;
 import static java.util.stream.Stream.concat;
@@ -17,13 +21,39 @@ import static java.util.stream.Stream.concat;
  */
 public final class ProcessingEnvironmentCompilerOptions extends CompilerOptions {
 
+    private final XMessager messager;
     private final Map<String, String> options;
+    private final DaggerElements elements;
+    private final Map<EnumOption<?>, Object> enumOptions = new HashMap<>();
+    private final Map<EnumOption<?>, ImmutableMap<String, ? extends Enum<?>>> allCommandLineOptions =
+            new HashMap<>();
 
     @Inject
     ProcessingEnvironmentCompilerOptions(
-            @ProcessingOptions Map<String, String> options
+            XMessager messager,
+            @ProcessingOptions Map<String, String> options,
+            DaggerElements elements
     ) {
+        this.messager = messager;
         this.options = options;
+        this.elements = elements;
+
+    }
+
+
+    /**
+     * An option that can be set on the command line.
+     */
+    private interface EnumOption<E extends Enum<E>> extends CommandLineOption {
+        /**
+         * The default value for this option.
+         */
+        E defaultValue();
+
+        /**
+         * The valid values for this option.
+         */
+        Set<E> validValues();
     }
 
     @Override
@@ -34,6 +64,11 @@ public final class ProcessingEnvironmentCompilerOptions extends CompilerOptions 
     @Override
     public boolean headerCompilation() {
         return isEnabled(HEADER_COMPILATION);
+    }
+
+    @Override
+    public boolean experimentalDaggerErrorMessages() {
+        return false;
     }
 
 

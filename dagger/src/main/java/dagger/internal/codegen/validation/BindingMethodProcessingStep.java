@@ -12,11 +12,15 @@ public final class BindingMethodProcessingStep
 
 
     private final XMessager messager;
+    private final AnyBindingMethodValidator anyBindingMethodValidator;
 
     @Inject
     BindingMethodProcessingStep(
-            XMessager messager
+            XMessager messager,
+            AnyBindingMethodValidator anyBindingMethodValidator
     ) {
         this.messager = messager;
+        this.anyBindingMethodValidator = anyBindingMethodValidator;
     }
+
 }

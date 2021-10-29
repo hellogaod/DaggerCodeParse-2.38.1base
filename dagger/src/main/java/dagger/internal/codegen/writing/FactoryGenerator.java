@@ -1,11 +1,15 @@
 package dagger.internal.codegen.writing;
 
 import javax.inject.Inject;
+import javax.lang.model.SourceVersion;
 
+import androidx.room.compiler.processing.XFiler;
 import dagger.internal.Factory;
 import dagger.internal.codegen.base.SourceFileGenerator;
 import dagger.internal.codegen.binding.ProvisionBinding;
 import dagger.internal.codegen.compileroption.CompilerOptions;
+import dagger.internal.codegen.kotlin.KotlinMetadataUtil;
+import dagger.internal.codegen.langmodel.DaggerElements;
 import dagger.internal.codegen.langmodel.DaggerTypes;
 
 /**
@@ -18,15 +22,19 @@ public final class FactoryGenerator extends SourceFileGenerator<ProvisionBinding
 
     private final DaggerTypes types;
     private final CompilerOptions compilerOptions;
+    private final KotlinMetadataUtil metadataUtil;
 
     @Inject
     FactoryGenerator(
-//            XFiler filer,
-//            SourceVersion sourceVersion,
+            XFiler filer,
+            SourceVersion sourceVersion,
             DaggerTypes types,
-//            DaggerElements elements,
-            CompilerOptions compilerOptions) {
+            DaggerElements elements,
+            CompilerOptions compilerOptions,
+            KotlinMetadataUtil metadataUtil
+    ) {
         this.types = types;
         this.compilerOptions = compilerOptions;
+        this.metadataUtil = metadataUtil;
     }
 }
