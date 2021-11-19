@@ -98,13 +98,20 @@ public class ComponentProcessor extends JavacBasicAnnotationProcessor {
     }
 
     @Override
-    public SourceVersion getSupportedSourceVersion() {
+    public SourceVersion getSupportedSourceVersion() {//第一个执行
+
         return SourceVersion.latestSupported();
     }
 
+//    @Override
+//    public Set<String> getSupportedOptions() {//第三个执行
+//
+//       return super.getSupportedOptions();
+//    }
 
     @Override
-    public Iterable<XProcessingStep> processingSteps() {
+    public Iterable<XProcessingStep> processingSteps() {//第二个执行
+
         ProcessorComponent.factory()
                 .create(getXProcessingEnv(),testingPlugins.orElseGet(this::loadExternalPlugins))
                 .inject(this);
@@ -120,7 +127,7 @@ public class ComponentProcessor extends JavacBasicAnnotationProcessor {
     }
 
     @Override
-    public void postRound(XProcessingEnv env, XRoundEnv round) {
+    public void postRound(XProcessingEnv env, XRoundEnv round) {//第四个执行
 
     }
 

@@ -1,15 +1,29 @@
 package dagger.internal.codegen;
 
+import com.google.common.collect.ImmutableSet;
+import com.squareup.javapoet.ClassName;
+
+import java.util.Set;
+
 import javax.inject.Inject;
+import javax.lang.model.element.TypeElement;
 
 import androidx.room.compiler.processing.XMessager;
 import androidx.room.compiler.processing.XTypeElement;
+import androidx.room.compiler.processing.compat.XConverters;
 import dagger.internal.codegen.base.SourceFileGenerator;
 import dagger.internal.codegen.binding.ComponentDescriptor;
 import dagger.internal.codegen.binding.ComponentDescriptorFactory;
 import dagger.internal.codegen.validation.ComponentCreatorValidator;
 import dagger.internal.codegen.validation.ComponentValidator;
 import dagger.internal.codegen.validation.TypeCheckingProcessingStep;
+import dagger.internal.codegen.validation.ValidationReport;
+
+import static com.google.auto.common.MoreElements.asType;
+import static com.google.common.collect.Sets.union;
+import static dagger.internal.codegen.base.ComponentAnnotation.rootComponentAnnotations;
+import static dagger.internal.codegen.binding.ComponentCreatorAnnotation.rootComponentCreatorAnnotations;
+import static java.util.Collections.disjoint;
 
 /**
  * A processing step that emits the API of a generated component, without any actual implementation.
@@ -48,5 +62,40 @@ final class ComponentHjarProcessingStep extends TypeCheckingProcessingStep<XType
         this.creatorValidator = creatorValidator;
         this.componentDescriptorFactory = componentDescriptorFactory;
         this.componentGenerator = componentGenerator;
+    }
+
+
+    @Override
+    public Set<ClassName> annotationClassNames() {
+        return union(rootComponentAnnotations(), rootComponentCreatorAnnotations());
+    }
+
+    // TODO(ronshapiro): Validation might not even be necessary. We should measure it and figure out
+    // if it's worth seeing if removing it will still work. We could potentially add a new catch
+    // clause for any exception that's not TypeNotPresentException and ignore the component entirely
+    // in that case.
+    @Override
+    protected void process(XTypeElement xElement, ImmutableSet<ClassName> annotations) {
+        // TODO(bcorso): Remove conversion to javac type and use XProcessing throughout.
+        TypeElement element = XConverters.toJavac(xElement);
+        if (!disjoint(annotations, rootComponentAnnotations())) {
+            processRootComponent(element);
+        }
+        if (!disjoint(annotations, rootComponentCreatorAnnotations())) {
+            processRootCreator(element);
+        }
+    }
+
+    private void processRootComponent(TypeElement element) {
+        ValidationReport validationReport = componentValidator.validate(element);
+        validationReport.printMessagesTo(messager);
+//        if (validationReport.isClean()) {
+//            componentGenerator.generate(
+//                    componentDescriptorFactory.rootComponentDescriptor(element), messager);
+//        }
+    }
+
+    private void processRootCreator(TypeElement creator) {
+        creatorValidator.validate(asType(creator)).printMessagesTo(messager);
     }
 }

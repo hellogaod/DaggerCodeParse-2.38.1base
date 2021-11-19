@@ -28,7 +28,7 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
-//    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation 'androidx.core:core-ktx:1.3.2'
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'com.google.android.material:material:1.2.1'
@@ -39,10 +39,18 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
+    implementation group: 'org.jetbrains.kotlinx', name: 'kotlinx-metadata-jvm', version: '0.3.0'
+
+    // https://mvnrepository.com/artifact/com.google.devtools.ksp/symbol-processing-api
+    implementation "com.google.devtools.ksp:symbol-processing-api:1.5.31-1.0.0"
+
+
     implementation 'com.google.auto.service:auto-service:1.0-rc5'
     annotationProcessor "com.google.auto.service:auto-service:1.0-rc5"
     implementation "com.google.auto.value:auto-value:1.5.2"
     annotationProcessor "com.google.auto.value:auto-value:1.5.2"
+
+    implementation "com.google.guava:guava:30.1.1-jre"
 
     implementation("com.google.errorprone:error_prone_core:2.5.0")
 

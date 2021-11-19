@@ -1,9 +1,18 @@
 package dagger.internal.codegen.binding;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
+
+import java.util.Optional;
+
 import javax.inject.Inject;
+import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.TypeElement;
 
 import dagger.Component;
 import dagger.Provides;
+import dagger.internal.codegen.base.SourceFileGenerationException;
+import dagger.internal.codegen.base.SourceFileGenerator;
+import dagger.spi.model.Key;
 
 /**
  * Maintains the collection of provision bindings from {@link Inject} constructors and members
@@ -20,4 +29,39 @@ import dagger.Provides;
  * 2.①变量B的构造函数使用了Inject注解，或②变量B在Module注解类使用了Provider注解方法，返回类型是B
  */
 public interface InjectBindingRegistry {
+
+    /**
+     * Returns a {@link ProvisionBinding} for {@code key}. If none has been registered yet, registers
+     * one.
+     */
+    Optional<ProvisionBinding> getOrFindProvisionBinding(Key key);
+
+    /**
+     * Returns a {@link MembersInjectionBinding} for {@code key}. If none has been registered yet,
+     * registers one, along with all necessary members injection bindings for superclasses.
+     */
+    Optional<MembersInjectionBinding> getOrFindMembersInjectionBinding(Key key);
+
+    /**
+     * Returns a {@link ProvisionBinding} for a {@link dagger.MembersInjector} of {@code key}. If none
+     * has been registered yet, registers one.
+     */
+    Optional<ProvisionBinding> getOrFindMembersInjectorProvisionBinding(Key key);
+
+    @CanIgnoreReturnValue
+    Optional<ProvisionBinding> tryRegisterConstructor(ExecutableElement constructorElement);
+
+    @CanIgnoreReturnValue
+    Optional<MembersInjectionBinding> tryRegisterMembersInjectedType(TypeElement typeElement);
+
+    /**
+     * This method ensures that sources for all registered {@link Binding bindings} (either explicitly
+     * or implicitly via {@link #getOrFindMembersInjectionBinding} or {@link
+     * #getOrFindProvisionBinding}) are generated.
+     */
+    void generateSourcesForRequiredBindings(
+            SourceFileGenerator<ProvisionBinding> factoryGenerator,
+            SourceFileGenerator<MembersInjectionBinding> membersInjectorGenerator)
+            throws SourceFileGenerationException;
 }
+

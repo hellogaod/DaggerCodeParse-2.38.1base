@@ -19,8 +19,6 @@ public interface BindingMethodValidatorsModule {
     @Provides
     static ImmutableMap<ClassName, BindingMethodValidator> indexValidators(
             Set<BindingMethodValidator> validators) {
-//        return uniqueIndex(validators, BindingMethodValidator::methodAnnotation);
-
         return uniqueIndex(validators, BindingMethodValidator::methodAnnotation);
     }
 
