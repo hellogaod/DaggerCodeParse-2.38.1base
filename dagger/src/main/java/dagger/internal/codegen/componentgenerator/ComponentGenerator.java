@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.lang.model.SourceVersion;
+import javax.lang.model.element.Element;
 
 import androidx.room.compiler.processing.XFiler;
 import dagger.Component;
@@ -15,21 +16,33 @@ import dagger.internal.codegen.binding.BindingGraph;
 import dagger.internal.codegen.langmodel.DaggerElements;
 import dagger.internal.codegen.writing.ComponentImplementation;
 
-/** Generates the implementation of the abstract types annotated with {@link Component}. */
+import static com.google.common.base.Verify.verify;
+import static dagger.internal.codegen.writing.ComponentNames.getRootComponentClassName;
+
+/**
+ * Generates the implementation of the abstract types annotated with {@link Component}.
+ */
 final class ComponentGenerator extends SourceFileGenerator<BindingGraph> {
     private final TopLevelImplementationComponent.Factory topLevelImplementationComponentFactory;
+
 
     @Inject
     ComponentGenerator(
             XFiler filer,
             DaggerElements elements,
             SourceVersion sourceVersion,
-            TopLevelImplementationComponent.Factory topLevelImplementationComponentFactory
-    ) {
-
+            TopLevelImplementationComponent.Factory topLevelImplementationComponentFactory) {
+        super(filer, elements, sourceVersion);
         this.topLevelImplementationComponentFactory = topLevelImplementationComponentFactory;
     }
 
+
+    @Override
+    public Element originatingElement(BindingGraph input) {
+        return input.componentTypeElement();
+    }
+
+    @Override
     public ImmutableList<TypeSpec.Builder> topLevelTypes(BindingGraph bindingGraph) {
         ComponentImplementation componentImplementation =
                 topLevelImplementationComponentFactory
@@ -41,7 +54,11 @@ final class ComponentGenerator extends SourceFileGenerator<BindingGraph> {
                         .parentRequirementExpressions(Optional.empty())
                         .build()
                         .componentImplementation();
+        verify(
+                componentImplementation
+                        .name()
+                        .equals(getRootComponentClassName(bindingGraph.componentDescriptor())));
 
-        return  ImmutableList.of();
+        return ImmutableList.of(componentImplementation.generate().toBuilder());
     }
 }

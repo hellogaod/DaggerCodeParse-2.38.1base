@@ -148,18 +148,37 @@ abstract class BindingMethodValidator extends BindingElementValidator<Executable
         @Override
         protected final void checkAdditionalProperties() {
 
-            checkEnclosingElement();//校验绑定方法所在类
+            //5. bindingMethod方法如果是@Produces修饰，那么其所在modue节点只能使用ProducerModule注解，如果是@Provides、@Binds、@BindsOptionalOf、@Multibinds修饰的bindingMethod方法，那么所在的父级module节点可以使用Module或ProducerModule注解；
+            // - 如果bindingMethod方法所在父级节点是Kotlin Component Object类型，那么对该父级节点的父级节点作为module节点校验；
+            checkEnclosingElement();
 
-            checkTypeParameters();//校验方法是否使用了泛型
+            //6. bindingMethod方法不允许使用泛型,bindingMethod方法不允许使用private修饰；
+            checkTypeParameters();
+            checkNotPrivate();
 
-            checkNotPrivate();//校验方法不允许使用private修饰
+            //7. bindingMethod方法如果是@Provides或@Produces修饰，那么当前方法必须使用实现方法；如果方法使用@Binds、@BindsOptionalOf或@Multibinds修饰，那么必须是抽象方法（abstract修饰或接口非default修饰）；
+            checkAbstractness();
 
-            checkAbstractness();//校验方法是否允许abstract修饰
+            //8. bindingMethod方法如果使用@Binds、@BindsOptionalOf或@Multibinds修饰，那么该方法不允许throws异常；
+            // 如果方法使用@Provides修饰允许throws RuntimeException或Error及其子类型的异常；
+            // 如果方法使用@Produces修饰允许throws Exception或Error及其子类型的异常;
+            checkThrows();
 
-            checkThrows();//校验方法继承异常情况
+            //9. 对bindingMethod方法参数节点和参数类型节点做依赖校验,针对参数类型剥离RequestKind<T>获得T作为keyType（如果是RequestKind.INSTANCE，keyType就是参数类型）,：
+            // - 注1：①BindsOptionalOf或@Multibindings修饰的bindingMethod方法是没有参数的，所以不会进行下面的校验；②@Binds修饰的bindingMethod方法有且仅有一个参数继续下面的校验；
+            // - 注2：如果是@Provides修饰的bindingMethod方法，那么该方法参数不能是Produced<T>或Producer<T>并且继续下面的校验；
+            // - 注释3：如果是@Binds修饰的bindingMethod方法，①如果还是用了@ElementsIntoSet修饰，那么当前方法返回类型必须是Set<T>,而且T必须是当前方法返回类型或其子类；②当前方法参数必须是返回类型的子类，继续下面的校验；
+            // - (1) 如果方法参数使用@Assisted修饰，那么不继续往下校验；
+            // - (2) 当前方法参数节点如果使用了Qualifier修饰的注解修饰，那么最多只能存在一个；
+            // - (3) 如果当前方法参数节点没有使用Qualifier注解修饰，那么当前参数节点的构造函数不允许使用@AssistedInject修饰；
+            // - (4) 如果当前方法参数节点没有使用Qualifier注解修饰，并且keyType节点使用了@AssistedFactory修饰，那么参数类型要么是T要么是Provider<T>,而不能使用Lazy<T>、Producer<T>或Produced<T>；
+            // - (5) keyType不允许是通配符格式
+            // - (6) 如果keyType其实是MembersInjector<T>(必须存在T)类型对T做成员注入校验：
+            //  - ① T节点不能使用Qualifier注解修饰的注解修饰；
+            //  - ② T类型只能是类或接口，并且如果是泛型，泛型类型只能是类或接口或数组，数组又只能是类或接口或原始类型或数组，不允许出现例如T是List而不是List<T>的情况；
+            checkParameters();
 
-            checkParameters();//校验方法参数依赖，对参数依赖校验
-
+            //10. @Produces修饰的bindingMethod方法，如果出现@Nullable注解，则警告
             checkAdditionalMethodProperties();//附加
         }
 

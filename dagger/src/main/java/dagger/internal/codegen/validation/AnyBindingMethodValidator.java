@@ -106,7 +106,7 @@ public final class AnyBindingMethodValidator implements ClearableCache {
                 throw new IllegalArgumentException(
                         String.format("%s has no binding method annotation", method));
 
-            case 1://method绑定方法使用了methodAnnotations()中的一个注解，然后对绑定方法进行校验
+            case 1://bindingMethod有且仅又五种注解类型中的一个
                 report.addSubreport(
                         validators.get(getOnlyElement(bindingMethodAnnotations)).validate(method));
                 break;

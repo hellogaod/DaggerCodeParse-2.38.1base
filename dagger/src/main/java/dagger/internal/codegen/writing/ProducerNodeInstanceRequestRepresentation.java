@@ -1,26 +1,26 @@
 package dagger.internal.codegen.writing;
 
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
+
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
+import dagger.internal.codegen.binding.ComponentDescriptor;
 import dagger.internal.codegen.binding.ContributionBinding;
+import dagger.internal.codegen.binding.FrameworkType;
+import dagger.internal.codegen.javapoet.Expression;
 import dagger.internal.codegen.langmodel.DaggerElements;
 import dagger.internal.codegen.langmodel.DaggerTypes;
+import dagger.producers.internal.Producers;
 import dagger.spi.model.Key;
 
-/**
- * Copyright (C), 2019-2021, 佛生
- * FileName: ProducerNodeInstanceRequestRepresentation
- * Author: 佛学徒
- * Date: 2021/10/25 11:10
- * Description:
- * History:
- */
-class ProducerNodeInstanceRequestRepresentation {
-
-//    private final ShardImplementation shardImplementation;
-//    private final Key key;
-//    private final ProducerEntryPointView producerEntryPointView;
+/** Binding expression for producer node instances. */
+final class ProducerNodeInstanceRequestRepresentation
+        extends FrameworkInstanceRequestRepresentation {
+    private final ComponentImplementation.ShardImplementation shardImplementation;
+    private final Key key;
+    private final ProducerEntryPointView producerEntryPointView;
 
     @AssistedInject
     ProducerNodeInstanceRequestRepresentation(
@@ -29,10 +29,37 @@ class ProducerNodeInstanceRequestRepresentation {
             DaggerTypes types,
             DaggerElements elements,
             ComponentImplementation componentImplementation) {
-//        super(binding, frameworkInstanceSupplier, types, elements);
-//        this.shardImplementation = componentImplementation.shardImplementation(binding);
-//        this.key = binding.key();
-//        this.producerEntryPointView = new ProducerEntryPointView(shardImplementation, types);
+        super(binding, frameworkInstanceSupplier, types, elements);
+        this.shardImplementation = componentImplementation.shardImplementation(binding);
+        this.key = binding.key();
+        this.producerEntryPointView = new ProducerEntryPointView(shardImplementation, types);
+    }
+
+    @Override
+    protected FrameworkType frameworkType() {
+        return FrameworkType.PRODUCER_NODE;
+    }
+
+    @Override
+    Expression getDependencyExpression(ClassName requestingClass) {
+        Expression result = super.getDependencyExpression(requestingClass);
+        shardImplementation.addCancellation(
+                key,
+                CodeBlock.of(
+                        "$T.cancel($L, $N);",
+                        Producers.class,
+                        result.codeBlock(),
+                        ComponentImplementation.MAY_INTERRUPT_IF_RUNNING_PARAM));
+        return result;
+    }
+
+    @Override
+    Expression getDependencyExpressionForComponentMethod(
+            ComponentDescriptor.ComponentMethodDescriptor componentMethod, ComponentImplementation component) {
+        return producerEntryPointView
+                .getProducerEntryPointField(this, componentMethod, component.name())
+                .orElseGet(
+                        () -> super.getDependencyExpressionForComponentMethod(componentMethod, component));
     }
 
     @AssistedFactory

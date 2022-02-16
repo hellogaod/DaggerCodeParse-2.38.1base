@@ -147,7 +147,8 @@ public final class ComponentValidator implements ClearableCache {
         private final ImmutableSet<ComponentKind> componentKinds;
 
         // Populated by ComponentMethodValidators
-        //key:方法返回类型，value：方法节点
+        //key:subcomponent节点（①componentMethod方法返回类型是subcomponent节点；②componentMethod方法返回类型是subcomponent.creator,返回类型的父级节点subcomponent作为key），
+        // value：componentMethod方法节点
         private final SetMultimap<Element, ExecutableElement> referencedSubcomponents =
                 LinkedHashMultimap.create();
 
@@ -172,40 +173,39 @@ public final class ComponentValidator implements ClearableCache {
 
         //节点校验入口
         ValidationReport validateElement() {
-            //1.(Producer)Module,(Production)(Sub)Component注解最多只能使用其中的一个，否则报错
+            //1. componentAll节点上的componentAnnotationAll注解有且仅有一个；
             if (componentKinds.size() > 1) {
                 return moreThanOneComponentAnnotation();
             }
 
-            //2.校验@CancellationPolicy注解的用法：
-            // 如果当前component类使用了@CancellationPolicy注解，那么只能被Production(Sub)Component修饰
+            //2. 如果componentAll节点上使用了@CancellationPolicy注解修饰，那么当前componentAll节点只能使用@ProductionSubcomponent或@ProductionComponent注解；
             validateUseOfCancellationPolicy();
 
-            //3.component类只能是这两种情况：要么是接口，要么是抽象类
+            //3. componentAll节点只能是abstract抽象类或接口；
             validateIsAbstractType();
 
-            //4.校验component类中的creator
+            //4. componentAll节点最多只能存在一个creator节点，自行查看对creator的校验;
             validateCreators();
 
-            //5.@Reusable不允许被使用在component类上
+            //5. componentAll节点不能使用@Reusable修饰；
             validateNoReusableAnnotation();
 
-            //6.校验component类的方法
+            //6. 如果componentAll是一个kotlin文件，那么componentMethod方法名不能使用java关键字，自行查看下面对componentMethod方法校验;
             validateComponentMethods();
 
-            //7.校验没有冲突的入口点：入口方法最多只能有一个
+            //7. componentAll节点中的入口（方法是abstract修饰 && 方法无参 && 方法返回类型不是void && 方法没有使用泛型）并且该方法没有被重写，那么这个方法最多只能有一个；
             validateNoConflictingEntryPoints();
 
-            //8.referencedSubcomponents集合超过1个item:即方法返回类型 使用(Production)SubComponent注解 和 方法返回类型 使用component类的Builder或Factory注解 只能出现一个
+            //8. componentMethod方法返回类型是subcomponent或subcomponent.creator,该方法最多只能出现一个；
             validateSubcomponentReferences();
 
-            //9. component#dependencies校验：里面的类不能使用(Producer)Module注解，否则报错
+            //9. componentAnnotationAll#dependencies里面的类不能是module节点；
             validateComponentDependencies();
 
-            //10.Module#includes校验
+            //10. componentAnnotationAll#modules校验，自行查看；
             validateReferencedModules();
 
-            //11.subcomponent的校验： 使用(Production)SubComponent注解 或 使用component类的Builder或Factory注解的方法返回类型校验（该方法最多只会存在一个）
+            //11. 还需要对当前componentMethod方法返回类型是subcomponent（或subcomponent.creator）的subcomponent节点进行校验，从步骤1开始。
             validateSubcomponents();
 
             return report.build();
@@ -240,7 +240,7 @@ public final class ComponentValidator implements ClearableCache {
         }
 
         private void validateCreators() {
-            //1.对creator校验
+
             ImmutableList<DeclaredType> creators =
                     creatorAnnotationsFor(componentAnnotation()).stream()
                             .flatMap(annotation -> enclosedAnnotatedTypes(component, annotation).stream())
@@ -248,7 +248,7 @@ public final class ComponentValidator implements ClearableCache {
             creators.forEach(
                     creator -> report.addSubreport(creatorValidator.validate(asTypeElement(creator))));
 
-            //2.校验component类中的内部类最多只能有一个使用(Production)(Sub)Component.Builder或(Production)(Sub)ComponentFactory的注解
+
             if (creators.size() > 1) {
                 report.addError(
                         String.format(
@@ -272,10 +272,8 @@ public final class ComponentValidator implements ClearableCache {
         //校验component类的方法
         private void validateComponentMethods() {
 
-            //1.如果component是kotlin文件，那么不允许使用java关键字命名
             validateClassMethodName();
 
-            //2.对component类的非private、非static、abstract修饰的方法校验
             elements.getUnimplementedMethods(component).stream()
                     .map(ComponentMethodValidator::new)
                     .forEachOrdered(ComponentMethodValidator::validateMethod);
@@ -314,32 +312,47 @@ public final class ComponentValidator implements ClearableCache {
             //校验component类的方法入口
             void validateMethod() {
 
-                //1.方法不允许使用泛型类型
+                //1. componentMethod方法不能使用泛型，如果当前component节点是kotlin文件，那么注意componentMethod不能使用java关键字；
                 validateNoTypeVariables();
 
                 // abstract methods are ones we have to implement, so they each need to be validated
                 // first, check the return type. if it's a subcomponent, validate that method as
                 // such.
-                //returnType类型表示的类或接口使用了那种注解(是(Production)SubComponent注解)
                 Optional<AnnotationMirror> subcomponentAnnotation = subcomponentAnnotation();
 
-                //2.如果方法返回的类型使用了(Production)SubComponent注解,校验该注解
+                //2. 如果componentMethod方法的returnType返回类型使用了subcomponentAnnotation注解,校验
                 if (subcomponentAnnotation.isPresent()) {
 
+                    // - (1)收集subcomponent关联的module节点：
+                    // ①subcomponentAnnotation#modules里面的module节点；
+                    // ②条件①module节点上的注解moduleAnnotation#includes里面的module节点；
+                    // ③条件①和条件②的module节点的父级module（使用了moduleAnnotation注解）节点；
+                    //- (2)当前componentMethod方法的参数必须是module节点，并且该方法只允许一次同一类型的module节点，并且这个module节点来源于（1）-subcomponent关联的module节点
                     validateSubcomponentFactoryMethod(subcomponentAnnotation.get());
 
                 }
 
-                //3.如果方法返回类型使用了component类的Builder或Factory注解，校验
+                //3. componentMethod方法返回类型是subcomponent.creator节点,当前方法参数必须为空，并且对creator节点校验，自行查看;
                 else if (subcomponentCreatorAnnotation().isPresent()) {
 
                     validateSubcomponentCreatorMethod();
 
                 }
-                //4.方法返回类型不是使用(Production)SubComponent注解 && 方法返回类型不是使用component类的Builder或Factory注解
-                //（1）无参，对返回类型进行依赖校验
-                //（2） ①作为成员注解校验，自行去看逻辑；②方法返回类型 是void 或者方法返回类型和参数类型相同。
-                //（3）参数超过1个，报错
+
+                //4. 方法返回类型不是subcomponent节点也不是subcomponent.creator节点，那么参数最多只允许有一个，并且对无参和有一个参数的情况分别校验：
+                // - （1）componentMethod方法无参，对当前componentMethod方法和方法返回类型returnType做依赖校验：
+                //  - 注：returnType判断是否RequestKind类型，剥离RequestKind<T>外壳，获取T作为keyType，自行查看`2.1.1`RequestKind类型；
+                //  - ① 如果componentMethod方法使用了Assisted注解，那么不继续下面的校验(条件不可能成立，因为Assisted仅仅支持修饰参数)；
+                //  - ② componentMethod方法上最多只允许被一个Qualifier修饰的注解修饰；
+                //  - ③ 如果componentMethod没有被Qualifier修饰的注解修饰，那么keyType节点的构造函数不允许使用@AssistedInject修饰；
+                //  - ④ 如果componentMethod没有被Qualifier修饰的注解修饰，并且keyType节点使用了@AssistedFactory修饰，那么returnType不能是RequestKind中的Lazy<T>、 Producer<T>或Produced<T>，要么是T，要么是Provider<T>；；
+                //  - ⑤ keyType不允许使用通配符；
+                //  - ⑥ 如果keyType是MembersInjector<T>类型，对T校验(必须存在T)：
+                //   - a. T节点不允许使用Qualifier修饰的注解修饰；
+                //   - b. T只能是类或接口，如果是泛型，那么泛型里面只允许是类或接口或数组，数组只允许是类或接口或数组，类或接口不支持例如List类型（必须使用List<T>样式）；
+                // - （2） componentMethod方法返回类型不是subcomponent节点也不是subcomponent.creator节点，并且有且仅有一个参数，该方法和方法参数做成员注入校验：
+                //  - ① 对componentMethod方法和该方法参数进行校验，该componentMethod方法和方法参数都不能使用Qualifier修饰的注解修饰；并且方法参数类型只能是类或接口，如果使用泛型，那么泛型只能使用类或接口或数组，数组必须是类或数组，泛型不允许使用例如List(必须使用List<T>)样式；
+                //  - ② 该componentMethod方法返回类型要么是void，要么参数类型和方法返回类型一致;
                 else {
 
                     // if it's not a subcomponent...
@@ -358,12 +371,13 @@ public final class ComponentValidator implements ClearableCache {
             }
 
             private void validateNoTypeVariables() {
+                //getTypeVariables():方法泛型
                 if (!resolvedMethod.getTypeVariables().isEmpty()) {
                     report.addError("Component methods cannot have type variables", method);
                 }
             }
 
-            //returnType类型表示的类或接口使用了那种注解(是(Production)Component注解)
+            //returnType类型使用了subcomponentAnnotation注解
             private Optional<AnnotationMirror> subcomponentAnnotation() {
                 return checkForAnnotations(
                         returnType,
@@ -372,7 +386,7 @@ public final class ComponentValidator implements ClearableCache {
                                 .collect(toImmutableSet()));
             }
 
-            //返回类型subcomponentCreator注解，Builder或Factory注解
+            //返回类型subcomponent.creator节点
             private Optional<AnnotationMirror> subcomponentCreatorAnnotation() {
                 return checkForAnnotations(
                         returnType,
@@ -381,26 +395,24 @@ public final class ComponentValidator implements ClearableCache {
                                 : subcomponentCreatorAnnotations());
             }
 
-            //方法返回类型使用了(Production)Subcomponent注解的校验:
-            //1.如果方法参数是module类型，那么该类型的参数的注解在当前方法中只允许出现1次
-            //2.如果方法参数是module类型，那么这个module类一定存在于transitiveModules集合中
-            //3.subcomponent类的方法只允许接受module类型参数
             private void validateSubcomponentFactoryMethod(AnnotationMirror subcomponentAnnotation) {
-                //key：方法的返回类型，value：方法节点
+                //key：使用subcomponentAnnotation注释的方法返回类型，value：方法节点
                 referencedSubcomponents.put(MoreTypes.asElement(returnType), method);
 
-                //返回类型使用的ComponentKind类型
                 ComponentKind subcomponentKind =
                         ComponentKind.forAnnotatedElement(MoreTypes.asTypeElement(returnType)).get();
 
-                //获取Subcomponent#modules 里面的类
+                //subcomponentAnnotation#modules里面的module节点集合
                 ImmutableSet<TypeElement> moduleTypes =
                         ComponentAnnotation.componentAnnotation(subcomponentAnnotation).modules();
 
                 // TODO(gak): This logic maybe/probably shouldn't live here as it requires us to traverse
                 // subcomponents and their modules separately from how it is done in ComponentDescriptor and
                 // ModuleDescriptor
-                //moduleTypes集合收集每一个module类及其父类中的(Producer)Module#includes里面的module类
+                //收集module节点：返回类型使用subcomponentAnnotation注解，收集：
+                // ①subcomponentAnnotation#modules的module节点；
+                // ②条件①中的module节点使用的moduleAnnotation#includes里面的module节点;
+                // ③条件①②中的module节点的所有父级module节点（使用moduleAnnotation注解的节点）；
                 @SuppressWarnings("deprecation")
                 ImmutableSet<TypeElement> transitiveModules =
                         getTransitiveModules(types, elements, moduleTypes);
@@ -432,9 +444,9 @@ public final class ComponentValidator implements ClearableCache {
                                     },
                                     null);
 
-                    //如果subcomponent类的方法参数是module类
+                    //如果方法返回类型是subcomponent节点，方法参数是module类
                     if (moduleType.isPresent()) {
-                        //1.如果方法参数是module类型，那么该类型的参数在当前方法中只允许出现1次
+                        //如果方法参数是module节点，那么该类型的参数在当前方法中只允许出现1次
                         if (variableTypes.contains(moduleType.get())) {
                             report.addError(
                                     String.format(
@@ -443,7 +455,7 @@ public final class ComponentValidator implements ClearableCache {
                                             moduleType.get().getQualifiedName()),
                                     parameter);
                         }
-                        //2.如果方法参数是module类型，那么这个module类一定存在于transitiveModules集合中
+                        //如果方法参数是module类型，那么这个module类一定存在于transitiveModules集合中
                         if (!transitiveModules.contains(moduleType.get())) {
                             report.addError(
                                     String.format(
@@ -455,7 +467,7 @@ public final class ComponentValidator implements ClearableCache {
                         }
                         variableTypes.add(moduleType.get());
                     } else {
-                        //3.subcomponent类的方法只允许接受module类型参数
+                        //方法返回类型是subcomponent节点，方法参数必须是module类
                         report.addError(
                                 String.format(
                                         "Subcomponent factory methods may only accept modules, but %s is not.",
@@ -465,10 +477,8 @@ public final class ComponentValidator implements ClearableCache {
                 }
             }
 
-            //如果方法返回类型使用了component类的Builder或Factory注解:
-            //1.方法参数必须为空
-            //2.校验该返回类型，作为component类的Builder或Factory注解校验
             private void validateSubcomponentCreatorMethod() {
+                //key：使用subcomponentAnnotation.creatorAnnotation注释的方法返回类型所在的subcomponent节点，value：方法节点
                 referencedSubcomponents.put(MoreTypes.asElement(returnType).getEnclosingElement(), method);
 
                 //参数必须为空，否则报错
@@ -476,6 +486,7 @@ public final class ComponentValidator implements ClearableCache {
                     report.addError(builderMethodRequiresNoArgs(), method);
                 }
 
+                //creator节点校验
                 TypeElement creatorElement = MoreTypes.asTypeElement(returnType);
                 // TODO(sameb): The creator validator right now assumes the element is being compiled
                 // in this pass, which isn't true here.  We should change error messages to spit out
@@ -516,17 +527,17 @@ public final class ComponentValidator implements ClearableCache {
             SetMultimap<String, ExecutableElement> entryPointMethods = HashMultimap.create();
 
             methodsIn(elements.getAllMembers(component)).stream()
-                    .filter(//1.是入口方法：如果方法是abstract修饰 && 方法参数为空 && 方法返回类型不是void
+                    .filter(//是入口方法：如果方法是abstract修饰 && 方法参数为空 && 方法返回类型不是void &&方法没有使用泛型
                             method ->
                                     isEntryPoint(method, asExecutable(types.asMemberOf(componentType(), method))))
-                    .forEach(//2.方法没有被覆盖
+                    .forEach(//并且方法没有被重写
                             method ->
                                     addMethodUnlessOverridden(
                                             method, entryPointMethods.get(method.getSimpleName().toString())));
 
 
             for (Set<ExecutableElement> methods : asMap(entryPointMethods).values()) {
-                //如果方法存在不止一个，报错
+
                 if (distinctKeys(methods).size() > 1) {
                     reportConflictingEntryPoints(methods);
                 }
@@ -542,7 +553,7 @@ public final class ComponentValidator implements ClearableCache {
                                             component));
         }
 
-        private void validateComponentDependencies() {//component#dependencies校验：里面的类不能使用(Producer)Module注解，否则报错
+        private void validateComponentDependencies() {//componentAnnotation#dependencies校验：里面的类不能是module节点，否则报错
             for (TypeMirror type : componentAnnotation().dependencyTypes()) {
                 type.accept(CHECK_DEPENDENCY_TYPES, report);
             }
@@ -567,7 +578,7 @@ public final class ComponentValidator implements ClearableCache {
             report.addError(message.toString());
         }
 
-        private void validateReferencedModules() {//Module#includes校验
+        private void validateReferencedModules() {//componentAnnotationAll#modules校验
             report.addSubreport(
                     moduleValidator.validateReferencedModules(
                             component,
@@ -601,7 +612,7 @@ public final class ComponentValidator implements ClearableCache {
         }
     }
 
-    //入口判断：如果方法是abstract修饰 && 方法参数为空 && 方法返回类型不是void
+    //入口判断：如果方法是abstract修饰 && 方法参数为空 && 方法返回类型不是void && 方法没有使用泛型
     private static boolean isEntryPoint(ExecutableElement method, ExecutableType methodType) {
         return method.getModifiers().contains(ABSTRACT)
                 && method.getParameters().isEmpty()

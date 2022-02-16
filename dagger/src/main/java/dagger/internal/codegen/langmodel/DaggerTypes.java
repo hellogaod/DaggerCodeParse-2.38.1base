@@ -382,7 +382,7 @@ public final class DaggerTypes implements Types {
 
     @Override
     public boolean isAssignable(TypeMirror t1, TypeMirror t2) {
-        //isAssignable(t1, t2):t1可分配给t2，例如t2表示Set<String>的add方法，t1表示"1"的类型，那么返回true
+        //isAssignable(t1, t2):t1可分配给t2，例如t2表示Set<String>的add方法，t1表示"1"的类型，那么返回true,或者t2是t1的子类
         return types.isAssignable(t1, t2);
     }
 

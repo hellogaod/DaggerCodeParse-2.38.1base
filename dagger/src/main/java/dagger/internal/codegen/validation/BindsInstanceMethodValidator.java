@@ -41,23 +41,22 @@ final class BindsInstanceMethodValidator extends BindsInstanceElementValidator<E
         @Override
         protected void checkAdditionalProperties() {
 
-            //1.element方法（@BindsInstance修饰的方法）必须使用abstract修饰
+            //element方法（@BindsInstance修饰的方法）必须使用abstract修饰
             if (!element.getModifiers().contains(ABSTRACT)) {
                 report.addError("@BindsInstance methods must be abstract");
             }
 
-            //2.element方法（@BindsInstance修饰的方法）有且仅有一个参数
+            //element方法（@BindsInstance修饰的方法）有且仅有一个参数
             if (element.getParameters().size() != 1) {
                 report.addError(
                         "@BindsInstance methods should have exactly one parameter for the bound type");
             }
 
-            //3.element方法（@BindsInstance修饰的方法）所在的父类不允许使用Module或ProducerModule修饰
+            // @BindsInstance修饰的方法所在父节点不允许是module节点，也不允许是componentAll节点；
             TypeElement enclosingType = MoreElements.asType(element.getEnclosingElement());
             moduleAnnotation(enclosingType)
                     .ifPresent(moduleAnnotation -> report.addError(didYouMeanBinds(moduleAnnotation)));
 
-            //4.element（@BindsInstance修饰的方法）方法所在父类不允许使用(Producer)Component 或 (Producer)Subcomponent注解修饰
             ComponentAnnotation.anyComponentAnnotation(enclosingType)
                     .ifPresent(
                             componentAnnotation ->
@@ -70,7 +69,7 @@ final class BindsInstanceMethodValidator extends BindsInstanceElementValidator<E
 
         @Override
         protected Optional<TypeMirror> bindingElementType() {
-            //方法参数最多只有一个并且作为bindingElementType
+            //绑定节点类型：@BindsInstance修饰的方法参数有且仅有一个，使用当前参数类型
 
             List<? extends VariableElement> parameters =
                     MoreElements.asExecutable(element).getParameters();

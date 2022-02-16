@@ -42,6 +42,7 @@ import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.FINAL;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.STATIC;
+import static javax.lang.model.type.TypeKind.DECLARED;
 
 /**
  * A {@linkplain ValidationReport validator} for {@link Inject}-annotated elements and the types
@@ -134,7 +135,7 @@ public final class InjectValidator implements ClearableCache {
         ValidationReport.Builder builder =
                 ValidationReport.about(asType(constructorElement.getEnclosingElement()));
 
-        //1.构造函数不允许同时使用Inject注解和AssistedInject注解
+        //1. 节点的构造函数不允许同时使用Inject注解和AssistedInject注解;
         if (isAnnotationPresent(constructorElement, Inject.class)
                 && isAnnotationPresent(constructorElement, AssistedInject.class)) {
             builder.addError("Constructors cannot be annotated with both @Inject and @AssistedInject");
@@ -144,13 +145,12 @@ public final class InjectValidator implements ClearableCache {
         Class<?> injectAnnotation =
                 isAnnotationPresent(constructorElement, Inject.class) ? Inject.class : AssistedInject.class;
 
-        //2.被Inject或AssistedInject修饰的构造函数不允许使用private修饰
+        //2. 被Inject或AssistedInject修饰的构造函数不允许使用private修饰，也不能被Qualifier修饰的注解修饰；
         if (constructorElement.getModifiers().contains(PRIVATE)) {
             builder.addError(
                     "Dagger does not support injection into private constructors", constructorElement);
         }
 
-        //3.被Inject或AssistedInject修饰的构造函数不能被Qualifier修饰过的注解修饰
         for (AnnotationMirror qualifier : injectionAnnotations.getQualifiers(constructorElement)) {
             builder.addError(
                     String.format(
@@ -169,17 +169,24 @@ public final class InjectValidator implements ClearableCache {
             scopeErrorMsg += "; annotate the class instead";
         }
 
-        //4.被Inject或AssistedInject修饰的构造函数不能被使用Scope注解修饰的注解修饰
+        //3. 被Inject或AssistedInject修饰的构造函数不能被Scope注解修饰的注解修饰；
         for (Scope scope : scopesOf(constructorElement)) {
             builder.addError(scopeErrorMsg, constructorElement, scope.scopeAnnotation().java());
         }
 
-        //5.校验被Inject或AssistedInject修饰的构造函数里面的参数（参数即依赖）
+        //4. Inject或AssistedInject修饰的构造函数的参数不能是Produced< T>和Producer< T>类型,并且对参数和参数类型做依赖校验，规则如下：
+        //  - 注：当前参数类型剥离RequestKind< T>类型得到T作为keyType（当然如果是RequestKind.INSTANCE，那么keyType就是参数类型）
+        //  - （1）如果参数节点使用了@Assiste修饰，不进行下面的依赖校验；
+        //  - （2）如果参数节点使用了Qualifier修饰的注解修饰，那么该类型注解不得超过1个；
+        //  - （3）如果参数节点没有使用Qualifier修饰的注解修饰，那么keytype类型的构造函数不能使用AssistedInject修饰；
+        //  - （4）如果参数节点没有使用Qualifier修饰的注解修饰，并且keyType节点使用了@AssistedFactory修饰，那么当前参数要么是T要么是Provider< T>，不能是Lazy< T>、Producer< T>或Produced< T>；
+        //  - （5）keyType不能使用通配符；
+        //  - （6）如果keyType是MembersInjector< T>（必须存在T）类型，那么对T进行成员注入校验:a.不能使用Qualifier注解修饰的注解修饰;b.T只能是类或接口，并且如果是泛型，那么泛型类型只能是类或接口或数组，数组只能是类或接口或数组，并且T不允许出现例如List类型（必须是List< T>类型）；
         for (VariableElement parameter : constructorElement.getParameters()) {
             validateDependencyRequest(builder, parameter);
         }
 
-        //6.被Inject或AssistedInject修饰的构造函数如果继承异常，那么异常一定要继承RuntimeException或Error，否则报错
+        //5. 被Inject或AssistedInject修饰的构造函数如果throws异常，那么异常一定要是RuntimeException或Error或两者子类；
         if (throwsCheckedExceptions(constructorElement)) {
             builder.addItem(
                     String.format(
@@ -189,14 +196,11 @@ public final class InjectValidator implements ClearableCache {
                     constructorElement);
         }
 
-        //7.使用了Inject或AssistedInject修饰的元素所在类不可以被private类使用
+        //6. 使用了Inject或AssistedInject修饰的构造函数所在父节点不可以被private类使用,该构造函数所在父节点也不要使用abstract修饰,并且如果构造函数所在父节点是一个内部类，那么该内部类必须使用static修饰；
         checkInjectIntoPrivateClass(constructorElement, builder);
-
         TypeElement enclosingElement =
                 MoreElements.asType(constructorElement.getEnclosingElement());
-
         Set<Modifier> typeModifiers = enclosingElement.getModifiers();
-        //8.使用了Inject或AssistedInject修饰的元素所在类不能是Abstract抽象类，否则报错
         if (typeModifiers.contains(ABSTRACT)) {
             builder.addError(
                     String.format(
@@ -204,8 +208,6 @@ public final class InjectValidator implements ClearableCache {
                             injectAnnotation.getSimpleName()),
                     constructorElement);
         }
-
-        //9.如果使用Inject或AssistedInject修饰的构造函数所在类是一个内部类，那么必须使用Static修饰。
         if (enclosingElement.getNestingKind().isNested()
                 && !typeModifiers.contains(STATIC)) {
             builder.addError(
@@ -223,14 +225,14 @@ public final class InjectValidator implements ClearableCache {
                         .addAll(assistedInjectedConstructors(enclosingElement))
                         .build();
 
-        //10.一个类最多只能有一个构造函数被Inject或AssitedInject修饰
+        //7. 一个类最多只能有一个构造函数被Inject或AssitedInject修饰；
         if (injectConstructors.size() > 1) {
             builder.addError("Types may only contain one injected constructor", constructorElement);
         }
 
         ImmutableSet<Scope> scopes = scopesOf(enclosingElement);
 
-        //11.使用AssistedInject修饰的构造函数所在类，该类不能被使用Scope注解修饰的注解修饰
+        //8. 使用AssistedInject修饰的构造函数所在的父节点不能被使用Scope注解修饰的注解修饰；
         if (injectAnnotation == AssistedInject.class) {
             for (Scope scope : scopes) {
                 builder.addError(
@@ -239,7 +241,7 @@ public final class InjectValidator implements ClearableCache {
                         scope.scopeAnnotation().java());
             }
         }
-        //12.使用Inject修饰的构造函数所在类，该类最多只能有一个使用Scope注解修饰的注解修饰
+        //9. 使用Inject修饰的构造函数所在父节点最多只能有一个使用Scope注解修饰的注解修饰。
         else if (scopes.size() > 1) {
             for (Scope scope : scopes) {
                 builder.addError(
@@ -256,12 +258,12 @@ public final class InjectValidator implements ClearableCache {
         ValidationReport.Builder builder = ValidationReport.about(fieldElement);
         Set<Modifier> modifiers = fieldElement.getModifiers();
 
-        //1.不能被final修饰
+        //不能被final修饰
         if (modifiers.contains(FINAL)) {
             builder.addError("@Inject fields may not be final", fieldElement);
         }
 
-        //2.不能被private修饰(当然了根据privateMemberDiagnosticKind，是不能还是警告，又或者其他)
+        //不能被private修饰(当然了根据privateMemberDiagnosticKind，是不能还是警告，又或者其他)
         if (modifiers.contains(PRIVATE)) {
             builder.addItem(
                     "Dagger does not support injection into private fields",
@@ -269,7 +271,7 @@ public final class InjectValidator implements ClearableCache {
                     fieldElement);
         }
 
-        //3.不能被Static修饰(当然了根据privateMemberDiagnosticKind，是错误还是警告，又或者其他)
+        //不能被Static修饰(当然了根据privateMemberDiagnosticKind，是错误还是警告，又或者其他)
         if (modifiers.contains(STATIC)) {
             builder.addItem(
                     "Dagger does not support injection into static fields",
@@ -277,7 +279,7 @@ public final class InjectValidator implements ClearableCache {
                     fieldElement);
         }
 
-        //4.校验被Inject修饰的变量作为依赖的校验
+        //校验被Inject修饰的变量作为依赖的校验
         validateDependencyRequest(builder, fieldElement);
 
         return builder.build();
@@ -287,12 +289,12 @@ public final class InjectValidator implements ClearableCache {
     private ValidationReport validateMethod(ExecutableElement methodElement) {
         ValidationReport.Builder builder = ValidationReport.about(methodElement);
         Set<Modifier> modifiers = methodElement.getModifiers();
-        //1.方法不能被abstract修饰
+        //方法不能被abstract修饰
         if (modifiers.contains(ABSTRACT)) {
             builder.addError("Methods with @Inject may not be abstract", methodElement);
         }
 
-        //2.不能被private修饰(当然了根据privateMemberDiagnosticKind，是不能还是警告，又或者其他)
+        //不能被private修饰(当然了根据privateMemberDiagnosticKind，是不能还是警告，又或者其他)
         if (modifiers.contains(PRIVATE)) {
             builder.addItem(
                     "Dagger does not support injection into private methods",
@@ -300,7 +302,7 @@ public final class InjectValidator implements ClearableCache {
                     methodElement);
         }
 
-        //3.不能被Static修饰(当然了根据privateMemberDiagnosticKind，是错误还是警告，又或者其他)
+        //不能被Static修饰(当然了根据privateMemberDiagnosticKind，是错误还是警告，又或者其他)
         if (modifiers.contains(STATIC)) {
             builder.addItem(
                     "Dagger does not support injection into static methods",
@@ -308,18 +310,18 @@ public final class InjectValidator implements ClearableCache {
                     methodElement);
         }
 
-        //4.使用Inject修饰的方法不能存在泛型类型
+        //使用Inject修饰的方法不能存在泛型类型
         if (!methodElement.getTypeParameters().isEmpty()) {//getTypeParameters():所有泛型类型
             builder.addError("Methods with @Inject may not declare type parameters", methodElement);
         }
 
-        //5.使用Inject修饰的方法不能在方法上实现抛异常功能
+        //使用Inject修饰的方法不能在方法上实现抛异常功能
         if (!methodElement.getThrownTypes().isEmpty()) {
             builder.addError("Methods with @Inject may not throw checked exceptions. "
                     + "Please wrap your exceptions in a RuntimeException instead.", methodElement);
         }
 
-        //6.方法上的参数作为依赖，需要做依赖校验
+        //方法上的参数作为依赖，需要做依赖校验
         for (VariableElement parameter : methodElement.getParameters()) {
             validateDependencyRequest(builder, parameter);
         }
@@ -340,7 +342,16 @@ public final class InjectValidator implements ClearableCache {
         ValidationReport.Builder builder = ValidationReport.about(typeElement);
         boolean hasInjectedMembers = false;
 
-        //1.遍历类收集变量，如果变量被Inject修饰，校验
+        //1. 对使用Inject修饰变量校验：
+        // - （1）Inject修饰的变量节点不能使用final修饰；也不要使用private和static修饰（可能警告可能报错）；
+        // - （2）当前变量和变量类型做依赖校验：
+        // - 注：当前变量类型剥离RequestKind< T>类型得到T作为keyType（当然如果是RequestKind.INSTANCE，那么keyType就是变量类型）
+        //  - ① 当前变量如果使用了Qulifiers注解修饰的注解，那么该类型的注解最多只能使用1个；
+        //  - ② 如果变量节点没有使用Qualifier修饰的注解修饰，那么keytype类型的构造函数不能使用AssistedInject修饰；
+        //  - ③ 如果变量节点没有使用Qualifier修饰的注解修饰，并且keyType节点使用了@AssistedFactory修饰，那么当前参数要么是T要么是Provider< T>，不能是Lazy< T>、Producer< T>或Produced< T>；
+        //  - ④ keyType不能使用通配符；
+        //  - ⑤ 如果keyType是MembersInjector< T>（必须存在T）类型，那么对T进行成员注入校验:a.T不能使用Qualifier注解修饰的注解修饰;b.T只能是类或接口，并且如果是泛型，那么泛型类型只能是类或接口或数组，数组只能是类或接口或数组，并且T不允许出现例如List类型（必须是List< T>类型）
+        //  - ⑥ Inject修饰的变量节点不能是Produced< T>或Producer< T>类型；
         for (VariableElement element : ElementFilter.fieldsIn(typeElement.getEnclosedElements())) {
             if (MoreElements.isAnnotationPresent(element, Inject.class)) {
                 hasInjectedMembers = true;
@@ -351,7 +362,19 @@ public final class InjectValidator implements ClearableCache {
             }
         }
 
-        //2.遍历类收集方法，如果方法被Inject修饰，校验
+        //2. 对使用Inject修饰的普通方法校验：
+        // - （1）Inject修饰的普通方法必须是实现类，不能是abstract修饰的抽象类或接口方法；
+        // - （2）Inject修饰的普通方法不要使用private和static修饰（可能报错可能警告）；
+        // - （3）Inject修饰的普通方法不能使用泛型类型,并且不能throws异常；
+        // - （4）Inject修饰的普通方法的参数合参数类型做依赖校验：
+        // - 注1：当前参数类型剥离RequestKind< T>类型得到T作为keyType（当然如果是RequestKind.INSTANCE，那么keyType就是参数类型）；
+        // - 注2：如果参数使用了@Assisted修饰，不进行下面的依赖校验；
+        //  - ① 当前参数如果使用了Qulifiers注解修饰的注解，那么该类型的注解最多只能使用1个；
+        //  - ② 如果参数节点没有使用Qualifier修饰的注解修饰，那么keytype类型的构造函数不能使用AssistedInject修饰；
+        //  - ③ 如果参数节点没有使用Qualifier修饰的注解修饰，并且keyType节点使用了@AssistedFactory修饰，那么当前参数要么是T要么是Provider< T>，不能是Lazy< T>、Producer< T>或Produced< T>；
+        //  - ④ keyType不能使用通配符；
+        //  - ⑤ 如果keyType是MembersInjector< T>（必须存在T）类型，那么对T进行成员注入校验:a.T不能使用Qualifier注解修饰的注解修饰;b.T只能是类或接口，并且如果是泛型，那么泛型类型只能是类或接口或数组，数组只能是类或接口或数组，并且T不允许出现例如List类型（必须是List< T>类型）
+        //  - ⑥ Inject修饰的普通方法的参数类型不能是Produced< T>或Producer< T>类型；
         for (ExecutableElement element : ElementFilter.methodsIn(typeElement.getEnclosedElements())) {
             if (MoreElements.isAnnotationPresent(element, Inject.class)) {
                 hasInjectedMembers = true;
@@ -362,11 +385,9 @@ public final class InjectValidator implements ClearableCache {
             }
         }
 
-        //3.Inject或AssitedInject修饰的类里面存在Inject修饰的变量或方法
+        //3. Inject修饰的节点所在父节点最好不要被private修饰（可能警告可能报错）；并且Inject修饰的节点所在父节点不能是Kotlin Object或Kotlin Companion Object对象；
         if (hasInjectedMembers) {
-            //（1）.使用了Inject修饰的类所在类不可以被private类使用
             checkInjectIntoPrivateClass(typeElement, builder);
-            //（2）.Inject注解不能在Kotlin文件中使用
             checkInjectIntoKotlinObject(typeElement, builder);
         }
 
@@ -404,10 +425,15 @@ public final class InjectValidator implements ClearableCache {
         return builder.build();
     }
 
+    public boolean isValidType(TypeMirror type) {
+        if (!type.getKind().equals(DECLARED)) {
+            return true;
+        }
+        return validateType(MoreTypes.asTypeElement(type)).isClean();
+    }
+
     /**
      * Returns true if the given method element declares a checked exception.
-     * <p>
-     * 如果用异常抛出，但是异常抛出没有继承runtimeExceptionType 并且没有继承errorType 直接返回true
      */
     private boolean throwsCheckedExceptions(ExecutableElement methodElement) {
         TypeMirror runtimeExceptionType = elements.getTypeElement(RuntimeException.class).asType();

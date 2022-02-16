@@ -1,24 +1,28 @@
 package dagger.internal.codegen.writing;
 
+import com.google.common.collect.ImmutableSet;
+import com.squareup.javapoet.CodeBlock;
+
+import javax.inject.Provider;
+import javax.lang.model.type.TypeMirror;
+
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
+import dagger.internal.codegen.base.MapType;
 import dagger.internal.codegen.binding.BindingGraph;
 import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.langmodel.DaggerElements;
+import dagger.producers.Produced;
+import dagger.producers.Producer;
+import dagger.spi.model.DependencyRequest;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static dagger.internal.codegen.binding.MapKeys.getMapKeyExpression;
+import static dagger.internal.codegen.binding.SourceFiles.mapFactoryClassName;
 
-/**
- * Copyright (C), 2019-2021, 佛生
- * FileName: MapFactoryCreationExpression
- * Author: 佛学徒
- * Date: 2021/10/26 8:02
- * Description:
- * History:
- */
-class MapFactoryCreationExpression {
-
+/** A factory creation expression for a multibound map. */
+final class MapFactoryCreationExpression extends MultibindingFactoryCreationExpression {
 
     private final ComponentImplementation componentImplementation;
     private final BindingGraph graph;
@@ -32,11 +36,43 @@ class MapFactoryCreationExpression {
             ComponentRequestRepresentations componentRequestRepresentations,
             BindingGraph graph,
             DaggerElements elements) {
-//        super(binding, componentImplementation, componentRequestRepresentations);
+        super(binding, componentImplementation, componentRequestRepresentations);
         this.binding = checkNotNull(binding);
         this.componentImplementation = componentImplementation;
         this.graph = graph;
         this.elements = elements;
+    }
+
+    @Override
+    public CodeBlock creationExpression() {
+        CodeBlock.Builder builder = CodeBlock.builder().add("$T.", mapFactoryClassName(binding));
+        if (!useRawType()) {
+            MapType mapType = MapType.from(binding.key().type().java());
+            // TODO(ronshapiro): either inline this into mapFactoryClassName, or add a
+            // mapType.unwrappedValueType() method that doesn't require a framework type
+            TypeMirror valueType = mapType.valueType();
+            for (Class<?> frameworkClass :
+                    ImmutableSet.of(Provider.class, Producer.class, Produced.class)) {
+                if (mapType.valuesAreTypeOf(frameworkClass)) {
+                    valueType = mapType.unwrappedValueType(frameworkClass);
+                    break;
+                }
+            }
+            builder.add("<$T, $T>", mapType.keyType(), valueType);
+        }
+
+        builder.add("builder($L)", binding.dependencies().size());
+
+        for (DependencyRequest dependency : binding.dependencies()) {
+            ContributionBinding contributionBinding = graph.contributionBinding(dependency.key());
+            builder.add(
+                    ".put($L, $L)",
+                    getMapKeyExpression(contributionBinding, componentImplementation.name(), elements),
+                    multibindingDependencyExpression(dependency));
+        }
+        builder.add(".build()");
+
+        return builder.build();
     }
 
     @AssistedFactory

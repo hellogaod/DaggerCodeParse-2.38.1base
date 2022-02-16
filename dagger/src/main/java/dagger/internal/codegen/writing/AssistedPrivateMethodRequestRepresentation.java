@@ -1,28 +1,33 @@
 package dagger.internal.codegen.writing;
 
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.TypeName;
+
+import javax.lang.model.type.TypeMirror;
+
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
 import dagger.internal.codegen.binding.BindingRequest;
 import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.compileroption.CompilerOptions;
+import dagger.internal.codegen.javapoet.Expression;
 import dagger.internal.codegen.langmodel.DaggerTypes;
+import dagger.spi.model.BindingKind;
 import dagger.spi.model.RequestKind;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.squareup.javapoet.MethodSpec.methodBuilder;
+import static dagger.internal.codegen.binding.AssistedInjectionAnnotations.assistedParameterSpecs;
+import static dagger.internal.codegen.javapoet.CodeBlocks.parameterNames;
+import static dagger.internal.codegen.writing.ComponentImplementation.MethodSpecKind.PRIVATE_METHOD;
+import static javax.lang.model.element.Modifier.PRIVATE;
 
-/**
- * Copyright (C), 2019-2021, 佛生
- * FileName: AssistedPrivateMethodRequestRepresentation
- * Author: 佛学徒
- * Date: 2021/10/25 11:09
- * Description:
- * History:
- */
-class AssistedPrivateMethodRequestRepresentation {
-
-//    private final ShardImplementation shardImplementation;
+/** A binding expression that wraps private method call for assisted fatory creation. */
+final class AssistedPrivateMethodRequestRepresentation extends MethodRequestRepresentation {
+    private final ComponentImplementation.ShardImplementation shardImplementation;
     private final ContributionBinding binding;
     private final BindingRequest request;
     private final RequestRepresentation wrappedRequestRepresentation;
@@ -38,15 +43,60 @@ class AssistedPrivateMethodRequestRepresentation {
             ComponentImplementation componentImplementation,
             DaggerTypes types,
             CompilerOptions compilerOptions) {
-//        super(componentImplementation.shardImplementation(binding), types);
-//        checkArgument(binding.kind() == BindingKind.ASSISTED_INJECTION);
-//        checkArgument(request.requestKind() == RequestKind.INSTANCE);
+        super(componentImplementation.shardImplementation(binding), types);
+        checkArgument(binding.kind() == BindingKind.ASSISTED_INJECTION);
+        checkArgument(request.requestKind() == RequestKind.INSTANCE);
         this.binding = checkNotNull(binding);
         this.request = checkNotNull(request);
         this.wrappedRequestRepresentation = checkNotNull(wrappedRequestRepresentation);
-//        this.shardImplementation = componentImplementation.shardImplementation(binding);
+        this.shardImplementation = componentImplementation.shardImplementation(binding);
         this.compilerOptions = compilerOptions;
         this.types = types;
+    }
+
+    Expression getAssistedDependencyExpression(ClassName requestingClass) {
+        return Expression.create(
+                returnType(),
+                requestingClass.equals(shardImplementation.name())
+                        ? CodeBlock.of(
+                        "$N($L)", methodName(), parameterNames(assistedParameterSpecs(binding, types)))
+                        : CodeBlock.of(
+                        "$L.$N($L)",
+                        shardImplementation.shardFieldReference(),
+                        methodName(),
+                        parameterNames(assistedParameterSpecs(binding, types))));
+    }
+
+    @Override
+    protected CodeBlock methodCall() {
+        throw new IllegalStateException("This should not be accessed");
+    }
+
+    @Override
+    protected TypeMirror returnType() {
+        return types.accessibleType(binding.contributedType(), shardImplementation.name());
+    }
+
+    private String methodName() {
+        if (methodName == null) {
+            // Have to set methodName field before implementing the method in order to handle recursion.
+            methodName = shardImplementation.getUniqueMethodName(request);
+
+            // TODO(bcorso): Fix the order that these generated methods are written to the component.
+            shardImplementation.addMethod(
+                    PRIVATE_METHOD,
+                    methodBuilder(methodName)
+                            .addModifiers(PRIVATE)
+                            .addParameters(assistedParameterSpecs(binding, types, shardImplementation))
+                            .returns(TypeName.get(returnType()))
+                            .addStatement(
+                                    "return $L",
+                                    wrappedRequestRepresentation
+                                            .getDependencyExpression(shardImplementation.name())
+                                            .codeBlock())
+                            .build());
+        }
+        return methodName;
     }
 
     @AssistedFactory

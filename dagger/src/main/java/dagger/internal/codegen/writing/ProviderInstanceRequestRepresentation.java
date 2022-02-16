@@ -4,19 +4,12 @@ import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
 import dagger.internal.codegen.binding.ContributionBinding;
+import dagger.internal.codegen.binding.FrameworkType;
 import dagger.internal.codegen.langmodel.DaggerElements;
 import dagger.internal.codegen.langmodel.DaggerTypes;
 
-/**
- * Copyright (C), 2019-2021, 佛生
- * FileName: ProviderInstanceRequestRepresentation
- * Author: 佛学徒
- * Date: 2021/10/25 11:13
- * Description:
- * History:
- */
-class ProviderInstanceRequestRepresentation {
-
+/** Binding expression for provider instances. */
+final class ProviderInstanceRequestRepresentation extends FrameworkInstanceRequestRepresentation {
 
     @AssistedInject
     ProviderInstanceRequestRepresentation(
@@ -24,7 +17,12 @@ class ProviderInstanceRequestRepresentation {
             @Assisted FrameworkInstanceSupplier frameworkInstanceSupplier,
             DaggerTypes types,
             DaggerElements elements) {
-//        super(binding, frameworkInstanceSupplier, types, elements);
+        super(binding, frameworkInstanceSupplier, types, elements);
+    }
+
+    @Override
+    protected FrameworkType frameworkType() {
+        return FrameworkType.PROVIDER;
     }
 
     @AssistedFactory

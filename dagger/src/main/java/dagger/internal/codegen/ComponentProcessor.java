@@ -20,12 +20,14 @@ import javax.lang.model.SourceVersion;
 import androidx.room.compiler.processing.XProcessingEnv;
 import androidx.room.compiler.processing.XProcessingStep;
 import androidx.room.compiler.processing.XRoundEnv;
+import androidx.room.compiler.processing.compat.XConverters;
 import androidx.room.compiler.processing.javac.JavacBasicAnnotationProcessor;
 import dagger.BindsInstance;
 import dagger.Component;
 import dagger.Module;
 import dagger.Provides;
 import dagger.internal.codegen.base.ClearableCache;
+import dagger.internal.codegen.base.SourceFileGenerationException;
 import dagger.internal.codegen.base.SourceFileGenerator;
 import dagger.internal.codegen.binding.InjectBindingRegistry;
 import dagger.internal.codegen.binding.MembersInjectionBinding;
@@ -121,15 +123,11 @@ public class ComponentProcessor extends JavacBasicAnnotationProcessor {
 
         return processingSteps;
     }
-    
+
     private ImmutableSet<BindingGraphPlugin> loadExternalPlugins() {
         return ServiceLoaders.load(processingEnv, BindingGraphPlugin.class);
     }
 
-    @Override
-    public void postRound(XProcessingEnv env, XRoundEnv round) {//第四个执行
-
-    }
 
     @Singleton
     @Component(
@@ -196,4 +194,17 @@ public class ComponentProcessor extends JavacBasicAnnotationProcessor {
         }
     }
 
+    @Override
+    public void postRound(XProcessingEnv env, XRoundEnv roundEnv) {//第四个执行
+        // TODO(bcorso): Add a way to determine if processing is over without converting to Javac here.
+        if (!XConverters.toJavac(roundEnv).processingOver()) {
+            try {
+                injectBindingRegistry.generateSourcesForRequiredBindings(
+                        factoryGenerator, membersInjectorGenerator);
+            } catch (SourceFileGenerationException e) {
+                e.printMessageTo(processingEnv.getMessager());
+            }
+        }
+        clearableCaches.forEach(ClearableCache::clearCache);
+    }
 }

@@ -72,10 +72,10 @@ final class AssistedProcessingStep extends TypeCheckingProcessingStep<XVariableE
             VariableElement javaAssisted = XConverters.toJavac(assisted);
             Element enclosingElement = javaAssisted.getEnclosingElement();
 
-            //1.@Assisted只能修饰方法参数，并且必须满足一下三个条件之一，否则报错：
-            //（1）@Assisted修饰的参数，位于一个被@AssistedInject修饰的构造函数中
-            //(2)@Assisted修饰的参数所在的方法是所在类中唯一的一个abstract、非static、非private修饰，并且该方法所在类使用了@AssistedFactory注解修饰
-            //(3)@Assisted修饰的参数所在的方法 ，该方法命名包含"copy" ，该方法所在类是一个data类型的kotlin文件
+            //1. Assisted只能修饰方法参数，并且仅仅满足一下条件：
+            // - （1）@Assisted修饰的参数，位于一个被@AssistedInject修饰的构造函数中；
+            // - （2）@Assisted修饰的参数所在的方法节点是所在父节点中唯一的一个abstract、非static、非private修饰的方法，并且该方法节点所在父节点使用@AssistedFactory注解修饰；
+            // - （3）@Assisted修饰的参数所在的方法 ，该方法命名包含"copy" ，该方法所在类是一个data类型的kotlin文件；
             if (!isAssistedInjectConstructor(enclosingElement)
                     && !isAssistedFactoryCreateMethod(enclosingElement)
                     // The generated java stubs for kotlin data classes contain a "copy" method that has
@@ -87,7 +87,7 @@ final class AssistedProcessingStep extends TypeCheckingProcessingStep<XVariableE
                         assisted);
             }
 
-            //2.@Assisted修饰的参数 不能被Qualifier注解修饰的注解修饰
+            //2. @Assisted修饰的参数节点不能被Qualifier注解修饰的注解修饰。
             injectionAnnotations
                     .getQualifiers(javaAssisted)
                     .forEach(

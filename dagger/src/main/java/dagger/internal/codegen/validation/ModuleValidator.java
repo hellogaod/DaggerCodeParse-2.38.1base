@@ -48,6 +48,7 @@ import dagger.internal.codegen.javapoet.TypeNames;
 import dagger.internal.codegen.kotlin.KotlinMetadataUtil;
 import dagger.internal.codegen.langmodel.DaggerElements;
 import dagger.internal.codegen.langmodel.DaggerTypes;
+import dagger.spi.model.BindingGraph;
 
 import static com.google.auto.common.AnnotationMirrors.getAnnotatedAnnotations;
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
@@ -180,9 +181,10 @@ public final class ModuleValidator {
     private ValidationReport validateUncached(TypeElement module, Set<TypeElement> visitedModules) {
         ValidationReport.Builder builder = ValidationReport.about(module);
 
-        //使用的(Producer)Module注解类型
+        //使用的moduleAnnotation注解类型
         ModuleKind moduleKind = ModuleKind.forAnnotatedElement(module).get();
 
+        //ContributesAndroidInjector
         TypeElement contributesAndroidInjectorElement =
                 elements.getTypeElement(CONTRIBUTES_ANDROID_INJECTOR_NAME);
 
@@ -209,7 +211,7 @@ public final class ModuleValidator {
             //查找module类中的所有方法，每个方法使用的注解集合
             for (AnnotationMirror annotation : moduleMethod.getAnnotationMirrors()) {
 
-                //如果module中的绑定方法不能使用ContributesAndroidInjector注解，否则报错
+                //4. 如果module节点中使用了ContributesAndroidInjector注解，那么必须引入androidProcessor；
                 if (!ANDROID_PROCESSOR.isPresent()
                         && MoreTypes.equivalence()
                         .equivalent(contributesAndroidInjector, annotation.getAnnotationType())) {
@@ -226,7 +228,7 @@ public final class ModuleValidator {
             }
         }
 
-        //不能再module类中既使用abstract抽象方法，又使用非静态的普通方法
+        //5. 同一个module节点中不允许既使用abstract修饰的bindingMethod方法，又使用非静态的普通实现的bindingMethod方法；
         if (bindingMethods.stream()
                 .map(ModuleMethodKind::ofMethod)
                 .collect(toImmutableSet())
@@ -238,16 +240,16 @@ public final class ModuleValidator {
                             moduleKind.annotation().simpleName()));
         }
 
-        //对module可见性以及其module注解的include包含的子module类进行校验
+        //6. module节点和module节点所在父节点，都不允许使用private修饰，最好是public修饰，否则可能存在访问不到bindingMethod方法的情况；
         validateModuleVisibility(module, moduleKind, builder);
 
         ImmutableListMultimap<Name, ExecutableElement> bindingMethodsByName =
                 Multimaps.index(bindingMethods, ExecutableElement::getSimpleName);
 
-        //同一个module类中不允许出现两个同名的绑定方法
+        //7. 同一个module节点中不允许出现同名bindingMethod绑定方法；
         validateMethodsWithSameName(builder, bindingMethodsByName);
 
-        //如果module类不是接口，校验(绑定)方法的继承
+        //8. 如果当前module节点不是接口，那么当前module中的bindingMethod方法，既不可以被重写，也不可以重写父级方法；
         if (module.getKind() != ElementKind.INTERFACE) {
 
             validateBindingMethodOverrides(
@@ -257,22 +259,26 @@ public final class ModuleValidator {
                     bindingMethodsByName);
         }
 
-        //检查module类修饰符
+        //9. 如果module节点使用了泛型，那么当前module节点必须是abstract修饰（接口则不需要）；
         validateModifiers(module, builder);
 
-        //对Module#includes里面的module进行校验
+        //10. 校验moduleAnnotation#includes里面的子module节点，从步骤1开始；
+        // - 注如果当前module节点使用Module注解，那么moduleAnnotation#includes里面的子module节点只能使用Module注解；
+        // 如果module注解使用ProducerModule注解，那么当前moduleAnnotation#includes里面的子module节点既可以使用Module注解，也可以使用ProducerModule注解；
         validateReferencedModules(module, moduleKind, visitedModules, builder);
 
-        //Module#subcomponents里面的component类进行校验
+        //11. moduleAnnotation#subcomponents里面必须是subcomponent节点（使用Subcomponent或productionProduction注解）：
+        // - subcomponent节点中必须存在creator节点；
         validateReferencedSubcomponents(module, moduleKind, builder);
 
-        //module类不允许使用Scope注解修饰的注解修饰
+        //12. module节点不允许使用Scope注解修饰的注解修饰；
         validateNoScopeAnnotationsOnModuleElement(module, moduleKind, builder);
 
-        //当前module类的Module#includes不能包含自己，否则肯定报错
+        //13. 当前module节点不能存在于moduleAnnotation#includes中；
+        // 当前module类的Module#includes不能包含自己，否则肯定报错
         validateSelfCycles(module, builder);
 
-        //如果module类存在 Kotlin Companion Object对象
+        //14. 如果module节点存在 Kotlin Companion Object对象，对当前Kotlin Companion Object对象里面校验bindingMethod方法（自行查看），并且该bindingMethod方法不是重写方法；
         if (metadataUtil.hasEnclosedCompanionObject(module)) {
             validateCompanionModule(module, builder);
         }
@@ -280,7 +286,7 @@ public final class ModuleValidator {
         //如果以上都没有报错，并且需要对Dagger构建的有向图进行校验
         if (builder.build().isClean()
                 && bindingGraphValidator.shouldDoFullBindingGraphValidation(module)) {
-//            validateModuleBindings(module, builder);
+            validateModuleBindings(module, builder);
         }
 
         return builder.build();
@@ -368,15 +374,12 @@ public final class ModuleValidator {
                 subcomponentType.getQualifiedName());
     }
 
-    //校验Subcomponent是否存在(Production)Subcomponent.Builder或(Production)Subcomponent.Factory注解
     private static void validateSubcomponentHasBuilder(
             TypeElement subcomponentAttribute,
             AnnotationMirror moduleAnnotation,
             ValidationReport.Builder builder) {
 
-        //subcomponentAttribute节点使用了(Production)Subcomponent注解，
-        // 并且subcomponent类的方法使用了(Production)SubComponent建造者（Builder或Factory注解）
-        //如果没有，则报错
+        //subcomponent节点中必须存在creator节点
         if (getSubcomponentCreator(subcomponentAttribute).isPresent()) {
             return;
         }
@@ -401,8 +404,8 @@ public final class ModuleValidator {
     //module类上的方法使用了不同修饰符，使用该枚举替代
     enum ModuleMethodKind {
         ABSTRACT_DECLARATION,//表示抽象方法
-        INSTANCE_BINDING,//表示静态方法
-        STATIC_BINDING,//表示普通方法
+        INSTANCE_BINDING,//表示普通实现方法
+        STATIC_BINDING,//表示静态方法
         ;
 
         static ModuleMethodKind ofMethod(ExecutableElement moduleMethod) {
@@ -464,10 +467,9 @@ public final class ModuleValidator {
         ImmutableSet<ClassName> validModuleAnnotations =
                 validModuleKinds.stream().map(ModuleKind::annotation).collect(toImmutableSet());
 
-        //获取Module#includes的注解值
+        //annotation如果是moduleAnnotation#includes，如果是componentAnnotationAll#modules
         for (AnnotationValue includedModule : getModules(annotation)) {
 
-            //转换成Type类型，并且对TypeMirror判断
             asType(includedModule)
                     .accept(
                             new SimpleTypeVisitor8<Void, Void>() {
@@ -483,15 +485,14 @@ public final class ModuleValidator {
                                     //类或接口
                                     TypeElement module = MoreElements.asType(t.asElement());
 
-                                    //Module#includes里面的module类不允许使用泛型
+                                    //1. module节点只能是类或接口，并且允许使用泛型；
                                     if (!t.getTypeArguments().isEmpty()) {
                                         reportError(
                                                 "%s is listed as a module, but has type parameters",
                                                 module.getQualifiedName());
                                     }
 
-                                    //Module#includes里面的module类只能使用Module注解；
-                                    // ProductionModule#includes里面的module类既可以Module也可以使用ProductionModule注解
+                                    //module节点只能使用validModuleAnnotations集合里面的注解
                                     if (!isAnyAnnotationPresent(module, validModuleAnnotations)) {
                                         reportError(
                                                 "%s is listed as a module, but is not annotated with %s",
@@ -508,7 +509,7 @@ public final class ModuleValidator {
                                         reportError("%s has errors", module.getQualifiedName());
                                     }
 
-                                    //module类是Companion Object对象
+                                    //2. module节点不能是Kotlin Companion Object对象；
                                     if (metadataUtil.isCompanionObjectClass(module)) {
                                         reportError(
                                                 "%s is listed as a module, but it is a companion object class. "
@@ -531,18 +532,17 @@ public final class ModuleValidator {
         return subreport.build();
     }
 
-    //根据注解类型，获取注解里面的module类。Component#modules和Module#includes两种情况
     private static ImmutableList<AnnotationValue> getModules(AnnotationMirror annotation) {
-        //如果注解是Module或ProducerModule，获取Module注解includes方法里面的值
+        //获取moduleAnnotation#includes里面的module
         if (isModuleAnnotation(annotation)) {
             return moduleAnnotation(annotation).includesAsAnnotationValues();
         }
 
-        //annotation 是不是(Producter)Component 或者(Producter)Subcomponent,如果是获取注解modules里面的值
+        //获取componentAnnotationAll#modules里面的module
         if (isComponentAnnotation(annotation)) {
             return componentAnnotation(annotation).moduleValues();
         }
-        //除此之外抛异常
+
         throw new IllegalArgumentException(String.format("unsupported annotation: %s", annotation));
     }
 
@@ -611,7 +611,7 @@ public final class ModuleValidator {
                 //表示当前类的父类的方法 在当前类的绑定方法中存在（按照方法名查找，可能存在多个，所以for遍历）
                 for (ExecutableElement bindingMethod : bindingMethodsByName.get(name)) {
 
-                    //1.如果当前类的父类的方法存在于当前类的绑定方法集合中，那么报错。
+                    // 如果当前module节点中的bindingMethod方法是重写superclassMethod方法，那么报错
                     if (failedMethods.add(bindingMethod)
                             && elements.overrides(bindingMethod, superclassMethod, subject)) {
                         builder.addError(
@@ -623,7 +623,7 @@ public final class ModuleValidator {
                 }
 
                 // For each binding method in superclass, confirm our methods don't override it.
-                //2.如果当前类的父类的方法是绑定方法，那么如果该绑定方法存在于子类，则报错。
+                // 如果当前类的父类的方法是绑定方法，那么如果该绑定方法被重写，则报错。
                 if (anyBindingMethodValidator.isBindingMethod(superclassMethod)) {
                     for (ExecutableElement method : allMethodsByName.get(name)) {
                         if (failedMethods.add(method)
@@ -653,14 +653,14 @@ public final class ModuleValidator {
         //module类所在父类型
         Visibility moduleEffectiveVisibility = effectiveVisibilityOfElement(moduleElement);
 
-        //1.module类不允许使用private修饰；并且不允许放在一个private私有类型中
+        // module类不允许使用private修饰；并且不允许放在一个private私有类型中
         if (moduleVisibility.equals(PRIVATE)) {
             reportBuilder.addError("Modules cannot be private.", moduleElement);
         } else if (moduleEffectiveVisibility.equals(PRIVATE)) {
             reportBuilder.addError("Modules cannot be enclosed in private types.", moduleElement);
         }
 
-        //2.①module类不允许使用匿名类或本地类；
+        //①module类不允许使用匿名类或本地类；
         // ②如果module类所在父类型是public，那么module类使用的Module注解的include包含的子module类，
         // 子module类所在父类型非public同时所有子module类中有非static和非abstract修饰的方法，这种情况是不被允许的。
         switch (moduleElement.getNestingKind()) {
@@ -791,19 +791,20 @@ public final class ModuleValidator {
         }
     }
 
+    private void validateModuleBindings(TypeElement module, ValidationReport.Builder report) {
 
-//    private void validateModuleBindings(TypeElement module, ValidationReport.Builder report) {
-//        BindingGraph bindingGraph =
-//                bindingGraphFactory.create(
-//                        componentDescriptorFactory.moduleComponentDescriptor(module), true)
-//                        .topLevelBindingGraph();
-//        if (!bindingGraphValidator.isValid(bindingGraph)) {
-//            // Since the validator uses a DiagnosticReporter to report errors, the ValdiationReport won't
-//            // have any Items for them. We have to tell the ValidationReport that some errors were
-//            // reported for the subject.
-//            report.markDirty();
-//        }
-//    }
+        BindingGraph bindingGraph =
+                bindingGraphFactory.create(
+                        componentDescriptorFactory.moduleComponentDescriptor(module), true)
+                        .topLevelBindingGraph();
+
+        if (!bindingGraphValidator.isValid(bindingGraph)) {
+            // Since the validator uses a DiagnosticReporter to report errors, the ValdiationReport won't
+            // have any Items for them. We have to tell the ValidationReport that some errors were
+            // reported for the subject.
+            report.markDirty();
+        }
+    }
 
     /**
      * Returns {@code true} if a module instance is needed for any of the binding methods on the given

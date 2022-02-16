@@ -3,6 +3,7 @@ package dagger.internal.codegen;
 import com.google.auto.common.BasicAnnotationProcessor;
 import com.google.auto.common.MoreElements;
 import com.google.common.collect.ImmutableSet;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.squareup.javapoet.ClassName;
 
 import java.util.Set;
@@ -17,6 +18,7 @@ import androidx.room.compiler.processing.compat.XConverters;
 import dagger.internal.codegen.base.SourceFileGenerator;
 import dagger.internal.codegen.binding.BindingGraph;
 import dagger.internal.codegen.binding.BindingGraphFactory;
+import dagger.internal.codegen.binding.ComponentDescriptor;
 import dagger.internal.codegen.binding.ComponentDescriptorFactory;
 import dagger.internal.codegen.validation.BindingGraphValidator;
 import dagger.internal.codegen.validation.ComponentCreatorValidator;
@@ -98,12 +100,35 @@ final class ComponentProcessingStep extends TypeCheckingProcessingStep<XTypeElem
         if (!isComponentValid(component)) {
             return;
         }
+        //重头戏，生成ComponentDescriptor对象
+        ComponentDescriptor componentDescriptor =
+                componentDescriptorFactory.rootComponentDescriptor(component);
+
+        if (!isValid(componentDescriptor)) {
+            return;
+        }
+
+        if (!validateFullBindingGraph(componentDescriptor)) {
+            return;
+        }
+        BindingGraph bindingGraph = bindingGraphFactory.create(componentDescriptor, false);
+        if (bindingGraphValidator.isValid(bindingGraph.topLevelBindingGraph())) {
+            generateComponent(bindingGraph);
+        }
     }
 
     private void processSubcomponent(TypeElement subcomponent) {
         if (!isComponentValid(subcomponent)) {
             return;
         }
+        ComponentDescriptor subcomponentDescriptor =
+                componentDescriptorFactory.subcomponentDescriptor(subcomponent);
+        // TODO(dpb): ComponentDescriptorValidator for subcomponents, as we do for root components.
+        validateFullBindingGraph(subcomponentDescriptor);
+    }
+
+    private void generateComponent(BindingGraph bindingGraph) {
+        componentGenerator.generate(bindingGraph, messager);
     }
 
     //校验component 的Builder或Factory注解
@@ -116,5 +141,25 @@ final class ComponentProcessingStep extends TypeCheckingProcessingStep<XTypeElem
         ValidationReport report = componentValidator.validate(asType(component));
         report.printMessagesTo(messager);
         return report.isClean();
+    }
+
+    @CanIgnoreReturnValue
+    private boolean validateFullBindingGraph(ComponentDescriptor componentDescriptor) {
+
+        TypeElement component = componentDescriptor.typeElement();
+
+        if (!bindingGraphValidator.shouldDoFullBindingGraphValidation(component)) {
+            return true;
+        }
+
+        BindingGraph fullBindingGraph = bindingGraphFactory.create(componentDescriptor, true);
+        return bindingGraphValidator.isValid(fullBindingGraph.topLevelBindingGraph());
+    }
+
+    private boolean isValid(ComponentDescriptor componentDescriptor) {
+        ValidationReport componentDescriptorReport =
+                componentDescriptorValidator.validate(componentDescriptor);
+        componentDescriptorReport.printMessagesTo(messager);
+        return componentDescriptorReport.isClean();
     }
 }

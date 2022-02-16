@@ -70,7 +70,7 @@ public abstract class BindingElementValidator<E extends Element> {
     /**
      * Returns a {@link ValidationReport} for {@code element}.
      * <p>
-     * 节点校验入口
+     * binding绑定节点校验入口
      */
     final ValidationReport validate(E element) {
         return reentrantComputeIfAbsent(cache, element, this::validateUncached);
@@ -155,19 +155,29 @@ public abstract class BindingElementValidator<E extends Element> {
          */
         private ValidationReport validate() {
 
-            //判断当前element节点，是否使用了IntoMap，IntoSet或ElementsIntoSet注解，并对不同情况进行判断
+            // 1. 根据当前bindingMethod方法是否使用@IntoSet（使用ContributionType.SET表示）、@IntoMap（使用ContributionType.MAP表示）、@ElementsIntoSet（使用ContributionType.SET_VALUES表示）注解或者都没有（使用ContributionType.UNIQUE表示）检查bindingMethod方法返回类型:
+            // - (1)如果是UNIQUE：那么bindingMethod返回类型必须满足：
+            //  - ① 方法返回类型不能使用FrameworkType架构类型：Provider<T>,Lazy<T>,MembersInjector<T>,Produced<T>,Producer<T>;
+            //  - ② 在bindingMethod方法没有使用Qualifier修饰的注解修饰情况下，bindingMethod方法的返回类型节点的构造函数不能使用AssistedInject修饰并且返回类型节点不能使用AssistedFactory注解修饰；
+            //  - ③ bindingMethod返回类型只能是原始类型或数组或接口或类或变量类型；
+            // - (2)如果是SET或MAP：那么bindingMethod返回类型只能是原始类型或数组或接口或类或变量类型；
+            // - (3)如果是SET_VALUES：那么bindingMethod方法返回类型必须是Set<T>,并且T只能是原始类型或数组或接口或类或变量类型；
+            // - (4)如果bindingMethod使用了@Multibinds修饰，那么不允许使用ContributionType类型，并且bindingMethod返回类型必须是Map<K,V>或Set<V>，并且V不能使用FrameworkType架构类型：Provider<T>,Lazy<T>,MembersInjector<T>,Produced<T>,Producer<T>;
             checkType();
 
-            //Element上的使用Qualifier注解修饰的注解最多只能有一个，否则报错
+            //2. bindingMethod方法上最多只允许被一个Qualifier修饰的注解修饰；
             checkQualifiers();
 
-            checkMapKeys();//校验element上MapKey注解修饰的注解逻辑判断
+            //3. bindingMethod方法上如果是@BindsOptionalOf和@Multibinds是不允许使用@IntoSet、@IntoMap、@ElementsIntoSet注解的；
+            // 并且如果是@Provides、@Binds、@Produces三种bindingMethod方法也只能选择@IntoSet、@IntoMap、@ElementsIntoSet中的一个使用，
+            // 并且@IntoMap和@MapKey修饰的注解一定是成对出现的，最多只会出现一次;
+            checkMapKeys();
+            checkMultibindings();
 
-            checkMultibindings();//element多重绑定的校验
+            //4. bindingMethod方法使用Scope修饰的注解情况，只有@Binds和@Provides修饰的bindingMethod支持使用Scope注解修饰的注解修饰，并且该bindingMethod方法只允许出现一个使用Scope注解修饰的注解修饰；
+            checkScopes();
 
-            checkScopes();//element使用Scope注解修饰的注解情况
-
-            checkAdditionalProperties();//子类中可能会实现
+            checkAdditionalProperties();
 
             return report.build();
         }
@@ -183,6 +193,8 @@ public abstract class BindingElementValidator<E extends Element> {
          * Key#type()}, for example in multibindings. An {@link Optional#empty()} return value indicates
          * that the contributed type is ambiguous or missing, i.e. a {@code @BindsInstance} method with
          * zero or many parameters.
+         * <p>
+         * 如果校验的是方法，那么bindingElementType表示方法返回类型
          */
         // TODO(dpb): should this be an ImmutableList<TypeMirror>, with this class checking the size?
         protected abstract Optional<TypeMirror> bindingElementType();
@@ -197,18 +209,6 @@ public abstract class BindingElementValidator<E extends Element> {
          *
          * <p>If the element has {@link dagger.multibindings.ElementsIntoSet @ElementsIntoSet} or {@code
          * SET_VALUES}, adds an error if the type is not a {@code Set<T>} for some {@code T}
-         * <p>
-         * 逻辑总结：check element类型，对不同类型进行不同校验
-         * <p>
-         * 1.如果element是UNIQUE类型
-         * ------①不允许使用FrameworkType中的类型，FrameworkType：Produced.class, Producer.class，Provider.class, Lazy.class, MembersInjector.class
-         * ------②当前节点没有使用Qulifier修饰，并且bindingElementType()存在而且还是一个类或接口情况下，不允许使用AssistdInject或AssistedFactory修饰
-         * ------会继续校验下面的2（因为case UNIQUE 没有break）
-         * 2.如果是SET或MAP类型；
-         * ------bindingElementType()类型只能是原始类型或数组或类型变量或类或接口
-         * ------不会往下校验了；
-         * 3.如果是SET_VALUES类型
-         * ------bindingElementType()节点必须是Set<T>格式,并且T只能是原始类型或数组或类型变量或类或接口
          */
         protected void checkType() {
             //判断当前element节点，是否使用了IntoMap，IntoSet或ElementsIntoSet注解
@@ -217,21 +217,16 @@ public abstract class BindingElementValidator<E extends Element> {
                     // Validate that a unique binding is not attempting to bind a framework type. This
                     // validation is only appropriate for unique bindings because multibindings may collect
                     // framework types.  E.g. Set<Provider<Foo>> is perfectly reasonable.
-
-                    //如果element节点没有使用IntoMap，IntoSet或ElementsIntoSet注解中的任何注解，那么不允许使用FrameworkType中的类型
                     checkFrameworkType();
 
                     // Validate that a unique binding is not attempting to bind an unqualified assisted type.
                     // This validation is only appropriate for unique bindings because multibindings may
                     // collect assisted types.
-
-                    //当前节点没有使用Qulifier修饰，并且bindingElementType()存在而且还是一个类或接口情况下，不允许使用AssistdInject或AssistedFactory修饰
                     checkAssistedType();
                     // fall through
 
                 case SET:
                 case MAP:
-                    //bindingElementType()类型只能是原始类型或数组或类型变量或类或接口
                     bindingElementType().ifPresent(type -> checkKeyType(type));
                     break;
 
@@ -244,7 +239,7 @@ public abstract class BindingElementValidator<E extends Element> {
         /**
          * Adds an error if {@code keyType} is not a primitive, declared type, array, or type variable.
          * <p>
-         * keyType只能是原始类型或数组或类型变量或类或接口
+         * keyType不能是void类型，只能是原始类型或数组或类型变量或类或接口或类型变量
          */
         protected void checkKeyType(TypeMirror keyType) {
             TypeKind kind = keyType.getKind();
@@ -269,7 +264,7 @@ public abstract class BindingElementValidator<E extends Element> {
 
                 TypeElement keyElement = asTypeElement(bindingElementType().get());
 
-                //bindingElementType()节点不允许使用AssistdInject修饰
+                //bindingElementType()节点的构造函数不允许使用AssistdInject修饰
                 if (isAssistedInjectionType(keyElement)) {
                     report.addError("Dagger does not support providing @AssistedInject types.", keyElement);
                 }
@@ -294,7 +289,7 @@ public abstract class BindingElementValidator<E extends Element> {
         /**
          * Adds an error if {@code type} is not a {@code Set<T>} for a reasonable {@code T}.
          * <p>
-         * bindingElementType()节点必须是Set<T>格式,并且T只能是原始类型或数组或类型变量或类或接口
+         * bindingElementType()节点必须是Set<T>格式,并且T只能是原始类型或数组或类型变量或类或接口或类型变量
          */
         protected final void checkSetValuesType(TypeMirror type) {
             if (!SetType.isSet(type)) {
@@ -326,13 +321,9 @@ public abstract class BindingElementValidator<E extends Element> {
         /**
          * Adds an error if an {@link dagger.multibindings.IntoMap @IntoMap} element doesn't have
          * exactly one {@link dagger.MapKey @MapKey} annotation, or if an element that is {@link
-         * dagger.multibindings.IntoMap @IntoMap} has any.
-         * <p>
-         * 1.如果当前不允许多重绑定，则不需要判断MapKey修饰情况，即不需要继续下面的判断；否则继续往下判断；
-         * 2.@IntoMap和@MapKey注解修饰的注解一定是同时存在于绑定节点上的，并且@MapKey修饰的注解有且仅有一个
-         */
+         * dagger.multibindings.IntoMap @IntoMap} has any.*/
         private void checkMapKeys() {
-            //不允许多重绑定，不需要往下继续校验
+            //不允许多重绑定，不需要往下继续校验:BindsOptional和Multibinds修饰的bindingMethod不允许使用@IntoSet，@IntoMap，@ElementsIntoSet注解修饰
             if (!allowsMultibindings.allowsMultibindings()) {
                 return;
             }
@@ -340,7 +331,7 @@ public abstract class BindingElementValidator<E extends Element> {
             //element节点上的被MapKey修饰的注解集
             ImmutableSet<? extends AnnotationMirror> mapKeys = MapKeys.getMapKeys(element);
 
-            //element使用了@IntoMap注解修饰了
+            //element节点上 @IntoMap和@MapKey修饰的注解一定是成对出现的，而且当前element节点上出现的次数都只会是一个
             if (ContributionType.fromBindingElement(element).equals(ContributionType.MAP)) {
                 switch (mapKeys.size()) {
                     case 0:
@@ -367,12 +358,6 @@ public abstract class BindingElementValidator<E extends Element> {
          *   <li>the element has a multibinding annotation and its {@link dagger.Provides} or {@link
          *       dagger.producers.Produces} annotation has a {@code type} parameter.
          * </ul>
-         * <p>
-         * element节点上多重绑定校验逻辑整理：
-         * <p>
-         * 1.如果当前不允许使用多重绑定，那么IntoMap，IntoSet，ElementsIntoSet注解表示的多重绑定肯定是不允许使用的；
-         * 2.如果当前允许多重绑定，那么多重绑定IntoMap，IntoSet，ElementsIntoSet注解最多element节点上只被允许使用一个
-         * 3.如果element使用了Provides注解,并且也使用了多重绑定，那么@Provides.type不能被当前element使用
          */
         private void checkMultibindings() {
 
@@ -424,10 +409,6 @@ public abstract class BindingElementValidator<E extends Element> {
         /**
          * Adds an error if the element has a scope but doesn't allow scoping, or if it has more than
          * one {@linkplain Scope scope} annotation.
-         * <p>
-         * element节点上 所有使用Scope注解修饰的注解
-         * 1.如果允许使用，那么最多只能存在一个；
-         * 2.如果不允许使用，则不适用，否则报错。
          */
         private void checkScopes() {
             //element节点上 所有使用Scope注解修饰的注解 转换成Scope对象

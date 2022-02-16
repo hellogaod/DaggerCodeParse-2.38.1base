@@ -16,12 +16,35 @@ import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.SimpleTypeVisitor6;
 
 import dagger.internal.codegen.langmodel.DaggerTypes;
+import dagger.spi.model.DaggerAnnotation;
 import dagger.spi.model.Key;
+
+import static com.google.auto.common.MoreTypes.asTypeElement;
+import static dagger.internal.codegen.base.ComponentAnnotation.allComponentAndCreatorAnnotations;
+import static dagger.internal.codegen.langmodel.DaggerElements.isAnyAnnotationPresent;
 
 /**
  * Utility methods related to {@link Key}s.
  */
 public final class Keys {
+
+    //Key里面的节点没有使用Qulifier修饰的注解修饰
+    //&& key里面的节点没有使用多重绑定
+    //&& key里面的节点类型是类或接口
+    public static boolean isValidMembersInjectionKey(Key key) {
+        return !key.qualifier().isPresent()
+                && !key.multibindingContributionIdentifier().isPresent()
+                && key.type().java().getKind().equals(TypeKind.DECLARED);
+    }
+
+    /**
+     * Returns {@code true} if this is valid as an implicit key (that is, if it's valid for a
+     * just-in-time binding by discovering an {@code @Inject} constructor).
+     */
+    public static boolean isValidImplicitProvisionKey(Key key, DaggerTypes types) {
+        return isValidImplicitProvisionKey(
+                key.qualifier().map(DaggerAnnotation::java), key.type().java(), types);
+    }
 
     /**
      * Returns {@code true} if a key with {@code qualifier} and {@code type} is valid as an implicit
@@ -77,5 +100,16 @@ public final class Keys {
                     }
                 },
                 null);
+    }
+
+    /**
+     * Returns {@code true} if the given key is for a component/subcomponent or a creator of a
+     * component/subcomponent.
+     */
+    public static boolean isComponentOrCreator(Key key) {
+        return !key.qualifier().isPresent()
+                && key.type().java().getKind() == TypeKind.DECLARED
+                && isAnyAnnotationPresent(
+                asTypeElement(key.type().java()), allComponentAndCreatorAnnotations());
     }
 }

@@ -57,13 +57,12 @@ final class AssistedInjectProcessingStep extends TypeCheckingProcessingStep<XExe
         new AssistedInjectValidator().validate(assistedInjectElement).printMessagesTo(messager);
     }
 
-    //1.AssistedInject必须修饰的是构造函数；
     // 2.AssistedInject修饰的构造函数里面的参数使用@Assited修饰进行校验，不允许重复（Assited#value和类型都一样情况）
     private final class AssistedInjectValidator {
         //入口，
         ValidationReport validate(XExecutableElement constructor) {
 
-            //1.AssistedInject注解仅仅可以修饰构造函数
+            //AssistedInject注解仅仅可以修饰构造函数
             ExecutableElement javaConstructor = XConverters.toJavac(constructor);
             checkState(javaConstructor.getKind() == ElementKind.CONSTRUCTOR);
 

@@ -9,9 +9,13 @@ import javax.inject.Inject;
 import androidx.room.compiler.processing.XFiler;
 import dagger.internal.codegen.compileroption.CompilerOptions;
 import dagger.internal.codegen.compileroption.ProcessingOptions;
+import dagger.internal.codegen.compileroption.ValidationType;
 import dagger.internal.codegen.langmodel.DaggerElements;
 import dagger.internal.codegen.langmodel.DaggerTypes;
+import dagger.spi.model.BindingGraph;
 import dagger.spi.model.BindingGraphPlugin;
+
+import static javax.tools.Diagnostic.Kind.ERROR;
 
 /**
  * Initializes {@link BindingGraphPlugin}s.
@@ -43,5 +47,23 @@ public final class ValidationBindingGraphPlugins {
         this.elements = elements;
         this.compilerOptions = compilerOptions;
         this.processingOptions = processingOptions;
+    }
+
+    /** Returns {@code false} if any of the plugins reported an error. */
+    boolean visit(BindingGraph graph) {
+        boolean errorsAsWarnings =
+                graph.isFullBindingGraph()
+                        && compilerOptions.fullBindingGraphValidationType().equals(ValidationType.WARNING);
+
+        boolean isClean = true;
+        for (BindingGraphPlugin plugin : plugins) {
+            DiagnosticReporterFactory.DiagnosticReporterImpl reporter =
+                    diagnosticReporterFactory.reporter(graph, plugin.pluginName(), errorsAsWarnings);
+            plugin.visitGraph(graph, reporter);
+            if (reporter.reportedDiagnosticKinds().contains(ERROR)) {
+                isClean = false;
+            }
+        }
+        return isClean;
     }
 }

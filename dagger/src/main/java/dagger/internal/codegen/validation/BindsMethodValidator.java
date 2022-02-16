@@ -100,7 +100,7 @@ final class BindsMethodValidator extends BindingMethodValidator {
                         "@Binds @ElementsIntoSet methods must return a Set and take a Set parameter");
             }
 
-            //2.如果方法使用了多重绑定，那么方法参数必须可分配给方法返回类型；例如方法的返回类型必须是Set<T>，那么方法参数T,否则报错
+            //2.ContributionType.UUNIQUE或SET或MAP，参数必须是返回类型的子类；
             if (!bindsTypeChecker.isAssignable(rightHandSide, leftHandSide, contributionType)) {
                 // Validate the type hierarchy of both sides to make sure they're both valid.
                 // If one of the types isn't valid it means we need to delay validation to the next round.

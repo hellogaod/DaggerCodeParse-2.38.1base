@@ -31,7 +31,7 @@ public final class MapKeyValidator {
     //校验入口，使用MapKey注解修饰的注解规则如下，
     //1.被修饰的注解类必须有方法
     //2.①如果MapKey.unwrapValue() = true的情况下，被修饰的注解类方法有且仅有一个，并且该方法的返回类型不可以是TypeKind.ARRAY数组；
-    //  ②如果MapKey.unwrapValue() = false，被修饰的注解类方法可以有多个，并且当前项目必须引用com.google.auto.value.AutoAnnotation,
+    //  ②如果MapKey.unwrapValue() = false，被修饰的注解类方法可以有多个，并且当前项目必须引用com.google.auto.value.AutoAnnotation;
     public ValidationReport validate(Element element) {
         ValidationReport.Builder builder = ValidationReport.about(element);
         List<ExecutableElement> members = methodsIn(((TypeElement) element).getEnclosedElements());

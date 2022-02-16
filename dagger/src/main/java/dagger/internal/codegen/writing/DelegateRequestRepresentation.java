@@ -1,30 +1,40 @@
 package dagger.internal.codegen.writing;
 
+import com.squareup.javapoet.ClassName;
+
+import javax.lang.model.type.TypeMirror;
+
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
+import dagger.internal.codegen.binding.Binding;
+import dagger.internal.codegen.binding.BindingGraph;
+import dagger.internal.codegen.binding.BindsTypeChecker;
 import dagger.internal.codegen.binding.ContributionBinding;
+import dagger.internal.codegen.javapoet.Expression;
 import dagger.internal.codegen.langmodel.DaggerElements;
 import dagger.internal.codegen.langmodel.DaggerTypes;
 import dagger.spi.model.RequestKind;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.collect.Iterables.getOnlyElement;
+import static dagger.internal.codegen.base.RequestKinds.requestType;
+import static dagger.internal.codegen.binding.BindingRequest.bindingRequest;
+import static dagger.internal.codegen.langmodel.Accessibility.isTypeAccessibleFrom;
+import static dagger.spi.model.BindingKind.DELEGATE;
+
 
 /**
- * Copyright (C), 2019-2021, 佛生
- * FileName: DelegateRequestRepresentation
- * Author: 佛学徒
- * Date: 2021/10/25 10:14
- * Description:
- * History:
+ * A {@link dagger.internal.codegen.writing.RequestRepresentation} for {@code @Binds} methods.
  */
-class DelegateRequestRepresentation {
+final class DelegateRequestRepresentation extends RequestRepresentation {
 
     private final ContributionBinding binding;
     private final RequestKind requestKind;
     private final ComponentRequestRepresentations componentRequestRepresentations;
     private final DaggerTypes types;
-//    private final BindsTypeChecker bindsTypeChecker;
+    private final BindsTypeChecker bindsTypeChecker;
 
     @AssistedInject
     DelegateRequestRepresentation(
@@ -33,13 +43,89 @@ class DelegateRequestRepresentation {
             ComponentRequestRepresentations componentRequestRepresentations,
             DaggerTypes types,
             DaggerElements elements) {
+
         this.binding = checkNotNull(binding);
         this.requestKind = checkNotNull(requestKind);
         this.componentRequestRepresentations = componentRequestRepresentations;
         this.types = types;
-//        this.bindsTypeChecker = new BindsTypeChecker(types, elements);
+        this.bindsTypeChecker = new BindsTypeChecker(types, elements);
     }
 
+    /**
+     * Returns {@code true} if the {@code @Binds} binding's scope is stronger than the scope of the
+     * binding it depends on.
+     */
+    static boolean isBindsScopeStrongerThanDependencyScope(
+            ContributionBinding bindsBinding, BindingGraph graph) {
+        checkArgument(bindsBinding.kind().equals(DELEGATE));
+        Binding dependencyBinding =
+                graph.contributionBinding(getOnlyElement(bindsBinding.dependencies()).key());
+        ScopeKind bindsScope = ScopeKind.get(bindsBinding);
+        ScopeKind dependencyScope = ScopeKind.get(dependencyBinding);
+        return bindsScope.isStrongerScopeThan(dependencyScope);
+    }
+
+    @Override
+    Expression getDependencyExpression(ClassName requestingClass) {
+
+        Expression delegateExpression =
+                componentRequestRepresentations.getDependencyExpression(
+                        bindingRequest(getOnlyElement(binding.dependencies()).key(), requestKind),
+                        requestingClass);
+
+        TypeMirror contributedType = binding.contributedType();
+        switch (requestKind) {
+            case INSTANCE://1.使用的是該kind類型
+                return instanceRequiresCast(delegateExpression, requestingClass)
+                        ? delegateExpression.castTo(contributedType)
+                        : delegateExpression;
+            default:
+                return castToRawTypeIfNecessary(
+                        delegateExpression, requestType(requestKind, contributedType, types));
+        }
+    }
+
+    private boolean instanceRequiresCast(Expression delegateExpression, ClassName requestingClass) {
+        // delegateExpression.type() could be Object if expression is satisfied with a raw
+        // Provider's get() method.
+        return !bindsTypeChecker.isAssignable(
+                delegateExpression.type(), binding.contributedType(), binding.contributionType())
+                && isTypeAccessibleFrom(binding.contributedType(), requestingClass.packageName());
+    }
+
+    /**
+     * If {@code delegateExpression} can be assigned to {@code desiredType} safely, then {@code
+     * delegateExpression} is returned unchanged. If the {@code delegateExpression} is already a raw
+     * type, returns {@code delegateExpression} as well, as casting would have no effect. Otherwise,
+     * returns a {@link Expression#castTo(TypeMirror) casted} version of {@code delegateExpression}
+     * to the raw type of {@code desiredType}.
+     */
+    // TODO(ronshapiro): this probably can be generalized for usage in InjectionMethods
+    private Expression castToRawTypeIfNecessary(
+            Expression delegateExpression, TypeMirror desiredType) {
+        if (types.isAssignable(delegateExpression.type(), desiredType)) {
+            return delegateExpression;
+        }
+        return delegateExpression.castTo(types.erasure(desiredType));
+    }
+
+    private enum ScopeKind {
+        UNSCOPED,
+        SINGLE_CHECK,
+        DOUBLE_CHECK,
+        ;
+
+        static ScopeKind get(Binding binding) {
+            return binding
+                    .scope()
+                    .map(scope -> scope.isReusable() ? SINGLE_CHECK : DOUBLE_CHECK)
+                    .orElse(UNSCOPED);
+        }
+
+        boolean isStrongerScopeThan(ScopeKind other) {
+            return this.ordinal() > other.ordinal();
+        }
+    }
 
     @AssistedFactory
     static interface Factory {

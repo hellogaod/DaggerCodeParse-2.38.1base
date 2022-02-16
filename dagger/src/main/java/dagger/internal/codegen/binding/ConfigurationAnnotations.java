@@ -42,6 +42,7 @@ import static javax.lang.model.util.ElementFilter.typesIn;
  */
 public final class ConfigurationAnnotations {
 
+    //subcomponent类中找creator节点
     public static Optional<TypeElement> getSubcomponentCreator(TypeElement subcomponent) {
         //是否使用了(Production)Subcomponent注解
         checkArgument(subcomponentAnnotation(subcomponent).isPresent());
@@ -63,7 +64,7 @@ public final class ConfigurationAnnotations {
     /**
      * Returns the first type that specifies this' nullability, or empty if none.
      *
-     * element节点上的注解是否有Nullable及其值
+     * element节点是否使用Nullable注解，返回该注解表示的类型
      */
     public static Optional<DeclaredType> getNullableType(Element element) {
         List<? extends AnnotationMirror> mirrors = element.getAnnotationMirrors();
@@ -97,7 +98,7 @@ public final class ConfigurationAnnotations {
         Iterables.addAll(moduleQueue, seedModules);
         Set<TypeElement> moduleElements = Sets.newLinkedHashSet();
 
-        //遍历所有的seedModules（module类）
+        //遍历所有的seedModules（module节点）
         for (TypeElement moduleElement : consumingIterable(moduleQueue)) {
 
             moduleAnnotation(moduleElement)
@@ -116,7 +117,7 @@ public final class ConfigurationAnnotations {
 
                                 ImmutableSet<TypeElement> moduleDependencies = moduleDependenciesBuilder.build();
 
-                                //3.
+
                                 moduleElements.add(moduleElement);
 
                                 //还可以在遍历过程中添加
@@ -152,7 +153,7 @@ public final class ConfigurationAnnotations {
      * Traverses includes from superclasses and adds them into the builder.
      * <p>
      * 一级级遍历element父类（保证父类必须是DECLARED类或接口类型，遍历前提：不是objectType类型），
-     * 并且添加到builder集合（并且使用了(Producer)Module注解）
+     * 并且添加到builder集合（并且使用了moduleAnnotation注解）
      */
     private static void addIncludesFromSuperclasses(
             DaggerTypes types,

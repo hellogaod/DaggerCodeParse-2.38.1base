@@ -62,21 +62,6 @@ final class DependencyRequestValidator {
      * non-instance request with a wildcard type.
      * <p>
      * 入口，依赖校验规则
-     * 前提.如果依赖使用了Assited注解修饰，那么就不需要下面的任何校验
-     * <p>
-     * 1.如果是Kotlin文件，缺少有关其限定符的元数据，则出错
-     * 2.节点上Qulifiers注解修饰的注解最多只能使用1个，否则报错
-     * 3.如果没有使用Qulifiers注解修饰的注解 && 依赖是类或接口
-     * ①节点构造函数使用了AssistdInject修饰，报错
-     * ②如果 依赖参数不是T也不是Provider<T> && 节点使用了AssistedFactory注解修饰，则报错
-     * 4.节点去除外层框架（如果存在，例如Provider<T>，）T不允许是通配符格式
-     * 5.如果keyType(节点去除外层框架,例如Provider<MembersInject<T>>)其实是MembersInject<T>类型，那么：
-     * 1）.必须是MembersInjector<T>而不是MembersInjector
-     * 2）.如果是MembersInjector<T>，对T进行校验：
-     * (1).不能使用Qualifier注解修饰的注解修饰；
-     * (2).节点只可以是类或接口，并且该类或接口是否使用了泛型：
-     * ①.如果没有使用泛型，那么不可以使用如List类似原始类型的写法（必须使用List<T>）;
-     * ②.如果使用了泛型，那么节点里面的泛型，只能是类或接口或数组，数组又只能是类或接口或原始类型或数组
      */
     void validateDependencyRequest(
             ValidationReport.Builder report,
@@ -85,12 +70,13 @@ final class DependencyRequestValidator {
     ) {
 
         //前提：如果节点使用了Assisted注解，不需要继续往下校验
+        //Assisted只能用于修饰参数
         if (MoreElements.isAnnotationPresent(requestElement, Assisted.class)) {
             // Don't validate assisted parameters. These are not dependency requests.
             return;
         }
 
-        //1.如果是Kotlin文件，缺少有关其限定符的元数据，则出错
+        //如果是Kotlin文件，缺少有关其限定符的元数据，则出错
         if (missingQualifierMetadata(requestElement)) {
 
             report.addError(
@@ -181,7 +167,7 @@ final class DependencyRequestValidator {
                             requestElement);
                 }
 
-                //如果 依赖参数不是T也不是Provider<T> && 节点使用了AssistedFactory注解修饰，则报错
+                //如果 keyType节点使用了@AssistedFactory修饰，那么requestType要么是T，要么是Provider<T>
                 if (!(requestKind == RequestKind.INSTANCE || requestKind == RequestKind.PROVIDER)
                         && AssistedInjectionAnnotations.isAssistedFactoryType(typeElement)) {
                     report.addError(
@@ -202,9 +188,8 @@ final class DependencyRequestValidator {
                         requestElement);
             }
 
-            //如果keyType其实是MembersInject<T>类型，那么：
-            //1.必须是MembersInjector<T>而不是MembersInjector
-            //2.如果是MembersInjector<T>，对T进行校验：
+            //如果keyType其实是MembersInjector<T>类型，那么：
+            //必须是MembersInjector<T>而不是MembersInjector,对T进行校验：
             // (1).不能使用Qualifier注解修饰的注解修饰；
             // (2).T只可以是类或接口，并且该类或接口是否使用了泛型：
             //    ①.如果没有使用泛型，那么不可以使用如List类似原始类型的写法（必须使用List<T>）;

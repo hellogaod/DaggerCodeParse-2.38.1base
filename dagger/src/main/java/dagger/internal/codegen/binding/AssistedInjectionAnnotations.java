@@ -1,5 +1,6 @@
 package dagger.internal.codegen.binding;
 
+import com.google.auto.common.MoreElements;
 import com.google.auto.common.MoreTypes;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
@@ -7,6 +8,10 @@ import com.google.common.base.Equivalence;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.squareup.javapoet.ParameterSpec;
+import com.squareup.javapoet.TypeName;
+
+import java.util.List;
 
 import javax.lang.model.element.Element;
 import javax.lang.model.element.ExecutableElement;
@@ -22,13 +27,17 @@ import dagger.assisted.AssistedInject;
 import dagger.internal.codegen.javapoet.TypeNames;
 import dagger.internal.codegen.langmodel.DaggerElements;
 import dagger.internal.codegen.langmodel.DaggerTypes;
+import dagger.internal.codegen.writing.ComponentImplementation;
+import dagger.spi.model.BindingKind;
 
 import static com.google.auto.common.MoreElements.isAnnotationPresent;
 import static com.google.auto.common.MoreTypes.asDeclared;
 import static com.google.auto.common.MoreTypes.asExecutable;
 import static com.google.auto.common.MoreTypes.asTypeElement;
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static dagger.internal.codegen.base.MoreAnnotationValues.getStringValue;
+import static dagger.internal.codegen.extension.DaggerStreams.toImmutableList;
 import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSet;
 import static dagger.internal.codegen.langmodel.DaggerElements.getAnnotationMirror;
 import static javax.lang.model.element.Modifier.ABSTRACT;
@@ -38,7 +47,41 @@ import static javax.lang.model.util.ElementFilter.constructorsIn;
  * Assisted injection utility methods.
  */
 public final class AssistedInjectionAnnotations {
+    /**
+     * Returns the list of assisted parameters as {@link ParameterSpec}s.
+     *
+     * <p>The type of each parameter will be the resolved type given by the binding key, and the name
+     * of each parameter will be the name given in the {@link
+     * dagger.assisted.AssistedInject}-annotated constructor.
+     */
+    public static ImmutableList<ParameterSpec> assistedParameterSpecs(
+            Binding binding, DaggerTypes types, ComponentImplementation.ShardImplementation shardImplementation) {
+        checkArgument(binding.kind() == BindingKind.ASSISTED_INJECTION);
+        ExecutableElement constructor = MoreElements.asExecutable(binding.bindingElement().get());
+        ExecutableType constructorType =
+                asExecutable(types.asMemberOf(asDeclared(binding.key().type().java()), constructor));
+        return assistedParameterSpecs(
+                constructor.getParameters(), constructorType.getParameterTypes(), shardImplementation);
+    }
 
+    private static ImmutableList<ParameterSpec> assistedParameterSpecs(
+            List<? extends VariableElement> paramElements,
+            List<? extends TypeMirror> paramTypes,
+            ComponentImplementation.ShardImplementation shardImplementation) {
+        ImmutableList.Builder<ParameterSpec> assistedParameterSpecs = ImmutableList.builder();
+        for (int i = 0; i < paramElements.size(); i++) {
+            VariableElement paramElement = paramElements.get(i);
+            TypeMirror paramType = paramTypes.get(i);
+            if (AssistedInjectionAnnotations.isAssistedParameter(paramElement)) {
+                assistedParameterSpecs.add(
+                        ParameterSpec.builder(
+                                TypeName.get(paramType),
+                                shardImplementation.getUniqueFieldNameForAssistedParam(paramElement))
+                                .build());
+            }
+        }
+        return assistedParameterSpecs.build();
+    }
     /**
      * Returns the factory method for the given factory {@link TypeElement}.
      * <p>
@@ -47,6 +90,83 @@ public final class AssistedInjectionAnnotations {
     public static ExecutableElement assistedFactoryMethod(
             TypeElement factory, DaggerElements elements) {
         return getOnlyElement(assistedFactoryMethods(factory, elements));
+    }
+
+    /**
+     * Returns the list of assisted parameters as {@link ParameterSpec}s.
+     *
+     * <p>The type of each parameter will be the resolved type given by the binding key, and the name
+     * of each parameter will be the name given in the {@link
+     * dagger.assisted.AssistedInject}-annotated constructor.
+     */
+    public static ImmutableList<ParameterSpec> assistedParameterSpecs(
+            Binding binding, DaggerTypes types) {
+        checkArgument(binding.kind() == BindingKind.ASSISTED_INJECTION);
+        ExecutableElement constructor = MoreElements.asExecutable(binding.bindingElement().get());
+        ExecutableType constructorType =
+                asExecutable(types.asMemberOf(asDeclared(binding.key().type().java()), constructor));
+        return assistedParameterSpecs(constructor.getParameters(), constructorType.getParameterTypes());
+    }
+
+    private static ImmutableList<ParameterSpec> assistedParameterSpecs(
+            List<? extends VariableElement> paramElements, List<? extends TypeMirror> paramTypes) {
+        ImmutableList.Builder<ParameterSpec> assistedParameterSpecs = ImmutableList.builder();
+        for (int i = 0; i < paramElements.size(); i++) {
+            VariableElement paramElement = paramElements.get(i);
+            TypeMirror paramType = paramTypes.get(i);
+            if (isAssistedParameter(paramElement)) {
+                assistedParameterSpecs.add(
+                        ParameterSpec.builder(TypeName.get(paramType), paramElement.getSimpleName().toString())
+                                .build());
+            }
+        }
+        return assistedParameterSpecs.build();
+    }
+
+    /**
+     * Returns the list of assisted factory parameters as {@link ParameterSpec}s.
+     *
+     * <p>The type of each parameter will be the resolved type given by the binding key, and the name
+     * of each parameter will be the name given in the {@link
+     * dagger.assisted.AssistedInject}-annotated constructor.
+     */
+    public static ImmutableList<ParameterSpec> assistedFactoryParameterSpecs(
+            Binding binding, DaggerElements elements, DaggerTypes types) {
+        checkArgument(binding.kind() == BindingKind.ASSISTED_FACTORY);
+
+        AssistedFactoryMetadata metadata =
+                AssistedFactoryMetadata.create(binding.bindingElement().get().asType(), elements, types);
+        ExecutableType factoryMethodType =
+                asExecutable(
+                        types.asMemberOf(asDeclared(binding.key().type().java()), metadata.factoryMethod()));
+        return assistedParameterSpecs(
+                // Use the order of the parameters from the @AssistedFactory method but use the parameter
+                // names of the @AssistedInject constructor.
+                metadata.assistedFactoryAssistedParameters().stream()
+                        .map(metadata.assistedInjectAssistedParametersMap()::get)
+                        .collect(toImmutableList()),
+                factoryMethodType.getParameterTypes());
+    }
+    //如果当前绑定使用的是AssistedInject注解修饰，那么返回该构造函数使用Assisted修饰的参数集合；否则返回空
+    public static ImmutableList<VariableElement> assistedParameters(Binding binding) {
+        return binding.kind() == BindingKind.ASSISTED_INJECTION
+                ? assistedParameters(MoreElements.asExecutable(binding.bindingElement().get()))
+                : ImmutableList.of();
+    }
+
+    //收集当前构造函数的如果使用了Assisted修饰的参数
+    private static ImmutableList<VariableElement> assistedParameters(ExecutableElement constructor) {
+        return constructor.getParameters().stream()
+                .filter(AssistedInjectionAnnotations::isAssistedParameter)
+                .collect(toImmutableList());
+    }
+    /**
+     * Returns {@code true} if this binding is uses assisted injection.
+     * <p>
+     * 如果使用了Assisted注解，返回true
+     */
+    public static boolean isAssistedParameter(VariableElement param) {
+        return isAnnotationPresent(MoreElements.asVariable(param), Assisted.class);
     }
 
     /**

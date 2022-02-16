@@ -30,6 +30,8 @@ public abstract class DependencyRequest {
 
     /**
      * The kind of this request.
+     *
+     * 依赖所在节点类型
      */
     public abstract RequestKind kind();
 
@@ -41,6 +43,8 @@ public abstract class DependencyRequest {
     /**
      * The element that declares this dependency request. Absent for <a href="#synthetic">synthetic
      * </a> requests.
+     *
+     * 当前绑定参数所在的节点
      */
     public abstract Optional<DaggerElement> requestElement();
 

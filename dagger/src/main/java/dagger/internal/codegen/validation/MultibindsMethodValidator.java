@@ -63,7 +63,7 @@ class MultibindsMethodValidator extends BindingMethodValidator {
 
         @Override
         protected void checkParameters() {
-            //方法参数不为空则报错
+            //方法参数为空
             if (!element.getParameters().isEmpty()) {
                 report.addError(bindingMethods("cannot have parameters"));
             }

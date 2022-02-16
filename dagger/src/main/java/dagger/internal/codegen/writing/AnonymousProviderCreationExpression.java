@@ -1,26 +1,29 @@
 package dagger.internal.codegen.writing;
 
 import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
 
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
+import dagger.internal.codegen.binding.BindingRequest;
 import dagger.internal.codegen.binding.ContributionBinding;
+import dagger.internal.codegen.javapoet.Expression;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static dagger.internal.codegen.binding.BindingRequest.bindingRequest;
+import static dagger.internal.codegen.javapoet.CodeBlocks.anonymousProvider;
+import static dagger.spi.model.RequestKind.INSTANCE;
 
 /**
- * Copyright (C), 2019-2021, 佛生
- * FileName: AnonymousProviderCreationExpression
- * Author: 佛学徒
- * Date: 2021/10/26 7:58
- * Description:
- * History:
+ * A {@link javax.inject.Provider} creation expression for an anonymous inner class whose
+ * {@code get()} method returns the expression for an instance binding request for its key.
  */
-class AnonymousProviderCreationExpression {
+final class AnonymousProviderCreationExpression
+        implements FrameworkFieldInitializer.FrameworkInstanceCreationExpression {
     private final ContributionBinding binding;
     private final ComponentRequestRepresentations componentRequestRepresentations;
-//    private final ClassName requestingClass;
+    private final ClassName requestingClass;
 
     @AssistedInject
     AnonymousProviderCreationExpression(
@@ -29,7 +32,19 @@ class AnonymousProviderCreationExpression {
             ComponentImplementation componentImplementation) {
         this.binding = checkNotNull(binding);
         this.componentRequestRepresentations = componentRequestRepresentations;
-//        this.requestingClass = componentImplementation.name();
+        this.requestingClass = componentImplementation.name();
+    }
+
+    @Override
+    public CodeBlock creationExpression() {
+        BindingRequest instanceExpressionRequest = bindingRequest(binding.key(), INSTANCE);
+        Expression instanceExpression =
+                componentRequestRepresentations.getDependencyExpression(
+                        instanceExpressionRequest,
+                        // Not a real class name, but the actual requestingClass is an inner class within the
+                        // given class, not that class itself.
+                        requestingClass.nestedClass("Anonymous"));
+        return anonymousProvider(instanceExpression);
     }
 
 

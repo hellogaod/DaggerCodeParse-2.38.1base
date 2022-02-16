@@ -21,9 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * Validates members injection requests (members injection methods on components and requests for
  * {@code MembersInjector<Foo>}).
  * <p>
- * 成员注解校验，成员注解有两个：
- * 1.(Sub)Component方法的成员注解 - (Sub)Component方法；
- * 2.请求成员注解： MembersInjector<Foo>的Foo进行校验
+ * 成员注解校验：
  */
 final class MembersInjectionValidator {
     private final InjectionAnnotations injectionAnnotations;
@@ -40,7 +38,7 @@ final class MembersInjectionValidator {
      * <p>
      * 入口，成员注入请求
      * MembersInjector<Foo>的Foo进行校验：
-     * 1.不能使用Qualifier注解修饰的注解修饰；
+     * 1.不能使用Qualifier注解修饰的注解修饰不能使用Qualifier注解修饰的注解修饰；
      * 2.节点只可以是类或接口，并且该类或接口是否使用了泛型：
      * （1）.如果没有使用泛型，那么不可以使用如List类似原始类型的写法（必须使用List<T>）;
      * （2）.如果使用了泛型，那么节点里面的泛型，只能是类或接口或数组，数组又只能是类或接口或原始类型或数组

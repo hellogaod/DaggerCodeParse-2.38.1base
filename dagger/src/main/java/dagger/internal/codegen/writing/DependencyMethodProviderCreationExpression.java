@@ -1,26 +1,42 @@
 package dagger.internal.codegen.writing;
 
+import com.google.auto.common.MoreTypes;
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
+import com.squareup.javapoet.MethodSpec;
+import com.squareup.javapoet.TypeName;
+
+import javax.lang.model.element.Element;
+
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
 import dagger.internal.codegen.binding.BindingGraph;
+import dagger.internal.codegen.binding.ComponentRequirement;
 import dagger.internal.codegen.binding.ContributionBinding;
+import dagger.internal.codegen.binding.ProvisionBinding;
 import dagger.internal.codegen.compileroption.CompilerOptions;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.squareup.javapoet.MethodSpec.constructorBuilder;
+import static com.squareup.javapoet.MethodSpec.methodBuilder;
+import static com.squareup.javapoet.TypeSpec.classBuilder;
+import static dagger.internal.codegen.javapoet.TypeNames.providerOf;
+import static dagger.internal.codegen.writing.ComponentImplementation.TypeSpecKind.COMPONENT_PROVISION_FACTORY;
+import static javax.lang.model.element.Modifier.FINAL;
+import static javax.lang.model.element.Modifier.PRIVATE;
+import static javax.lang.model.element.Modifier.PUBLIC;
+import static javax.lang.model.element.Modifier.STATIC;
 
 /**
- * Copyright (C), 2019-2021, 佛生
- * FileName: DependencyMethodProviderCreationExpression
- * Author: 佛学徒
- * Date: 2021/10/26 8:00
- * Description:
- * History:
+ * A {@link javax.inject.Provider} creation expression for a provision method on a component's
+ * {@linkplain dagger.Component#dependencies()} dependency}.
  */
-class DependencyMethodProviderCreationExpression {
+// TODO(dpb): Resolve with DependencyMethodProducerCreationExpression.
+final class DependencyMethodProviderCreationExpression
+        implements FrameworkFieldInitializer.FrameworkInstanceCreationExpression {
 
-
-//    private final ShardImplementation shardImplementation;
+    private final ComponentImplementation.ShardImplementation shardImplementation;
     private final ComponentRequirementExpressions componentRequirementExpressions;
     private final CompilerOptions compilerOptions;
     private final BindingGraph graph;
@@ -34,10 +50,75 @@ class DependencyMethodProviderCreationExpression {
             CompilerOptions compilerOptions,
             BindingGraph graph) {
         this.binding = checkNotNull(binding);
-//        this.shardImplementation = componentImplementation.shardImplementation(binding);
+        this.shardImplementation = componentImplementation.shardImplementation(binding);
         this.componentRequirementExpressions = componentRequirementExpressions;
         this.compilerOptions = compilerOptions;
         this.graph = graph;
+    }
+
+    @Override
+    public CodeBlock creationExpression() {
+        // TODO(sameb): The Provider.get() throws a very vague NPE.  The stack trace doesn't
+        // help to figure out what the method or return type is.  If we include a string
+        // of the return type or method name in the error message, that can defeat obfuscation.
+        // We can easily include the raw type (no generics) + annotation type (no values),
+        // using .class & String.format -- but that wouldn't be the whole story.
+        // What should we do?
+        CodeBlock invocation =
+                ComponentProvisionRequestRepresentation.maybeCheckForNull(
+                        (ProvisionBinding) binding,
+                        compilerOptions,
+                        CodeBlock.of(
+                                "$N.$N()", dependency().variableName(), provisionMethod().getSimpleName()));
+        ClassName dependencyClassName = ClassName.get(dependency().typeElement());
+        TypeName keyType = TypeName.get(binding.key().type().java());
+        MethodSpec.Builder getMethod =
+                methodBuilder("get")
+                        .addAnnotation(Override.class)
+                        .addModifiers(PUBLIC)
+                        .returns(keyType)
+                        .addStatement("return $L", invocation);
+        if (binding.nullableType().isPresent()) {
+            getMethod.addAnnotation(ClassName.get(MoreTypes.asTypeElement(binding.nullableType().get())));
+        }
+
+        // We need to use the componentShard here since the generated type is static and shards are
+        // not static classes so it can't be nested inside the shard.
+        ComponentImplementation.ShardImplementation componentShard =
+                shardImplementation.getComponentImplementation().getComponentShard();
+        ClassName factoryClassName =
+                componentShard
+                        .name()
+                        .nestedClass(
+                                ClassName.get(dependency().typeElement()).toString().replace('.', '_')
+                                        + "_"
+                                        + binding.bindingElement().get().getSimpleName());
+        componentShard.addType(
+                COMPONENT_PROVISION_FACTORY,
+                classBuilder(factoryClassName)
+                        .addSuperinterface(providerOf(keyType))
+                        .addModifiers(PRIVATE, STATIC, FINAL)
+                        .addField(dependencyClassName, dependency().variableName(), PRIVATE, FINAL)
+                        .addMethod(
+                                constructorBuilder()
+                                        .addParameter(dependencyClassName, dependency().variableName())
+                                        .addStatement("this.$1L = $1L", dependency().variableName())
+                                        .build())
+                        .addMethod(getMethod.build())
+                        .build());
+        return CodeBlock.of(
+                "new $T($L)",
+                factoryClassName,
+                componentRequirementExpressions.getExpressionDuringInitialization(
+                        dependency(), shardImplementation.name()));
+    }
+
+    private ComponentRequirement dependency() {
+        return graph.componentDescriptor().getDependencyThatDefinesMethod(provisionMethod());
+    }
+
+    private Element provisionMethod() {
+        return binding.bindingElement().get();
     }
 
     @AssistedFactory

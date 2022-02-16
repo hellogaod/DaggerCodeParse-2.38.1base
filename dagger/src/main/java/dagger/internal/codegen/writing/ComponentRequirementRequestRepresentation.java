@@ -1,22 +1,23 @@
 package dagger.internal.codegen.writing;
 
+import com.squareup.javapoet.ClassName;
+
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
 import dagger.internal.codegen.binding.ComponentRequirement;
 import dagger.internal.codegen.binding.ContributionBinding;
+import dagger.internal.codegen.javapoet.Expression;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * Copyright (C), 2019-2021, 佛生
- * FileName: ComponentRequirementRequestRepresentation
- * Author: 佛学徒
- * Date: 2021/10/25 11:20
- * Description:
- * History:
+ * A binding expression for instances bound with {@link dagger.BindsInstance} and instances of
+ * {@linkplain dagger.Component#dependencies() component} and {@linkplain
+ * dagger.producers.ProductionComponent#dependencies() production component dependencies}.
  */
-class ComponentRequirementRequestRepresentation {
+final class ComponentRequirementRequestRepresentation
+        extends SimpleInvocationRequestRepresentation {
     private final ComponentRequirement componentRequirement;
     private final ComponentRequirementExpressions componentRequirementExpressions;
 
@@ -25,11 +26,17 @@ class ComponentRequirementRequestRepresentation {
             @Assisted ContributionBinding binding,
             @Assisted ComponentRequirement componentRequirement,
             ComponentRequirementExpressions componentRequirementExpressions) {
-//        super(binding);
+        super(binding);
         this.componentRequirement = checkNotNull(componentRequirement);
         this.componentRequirementExpressions = componentRequirementExpressions;
     }
 
+    @Override
+    Expression getDependencyExpression(ClassName requestingClass) {
+        return Expression.create(
+                componentRequirement.type(),
+                componentRequirementExpressions.getExpression(componentRequirement, requestingClass));
+    }
 
     @AssistedFactory
     static interface Factory {

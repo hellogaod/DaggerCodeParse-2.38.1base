@@ -41,7 +41,7 @@ final class BindsInstanceParameterValidator extends BindsInstanceElementValidato
 
             Element enclosing = element.getEnclosingElement();
 
-            //1.@BindsInstance修饰的参数必须是使用在方法中，否则报错
+            //@BindsInstance修饰的参数必须是使用在方法中，否则报错
             if (!enclosing.getKind().equals(METHOD)) {
                 report.addError(
                         "@BindsInstance should only be applied to methods or parameters of methods");
@@ -50,12 +50,12 @@ final class BindsInstanceParameterValidator extends BindsInstanceElementValidato
 
             ExecutableElement method = MoreElements.asExecutable(enclosing);
 
-            //2.@BindsInstance修饰的参数所在方法必须使用abstract修饰
+            //@BindsInstance修饰的参数所在方法必须使用abstract修饰
             if (!method.getModifiers().contains(ABSTRACT)) {
                 report.addError("@BindsInstance parameters may only be used in abstract methods");
             }
 
-            //3.@BindsInstance修饰的参数所在方法的返回类型，只能是一个类或接口（可以是泛型），不能是void，数组又或者原始类型
+            //@BindsInstance修饰的参数所在方法的返回类型，只能是一个类或接口（可以是泛型），不能是void，数组又或者原始类型
             TypeKind returnKind = method.getReturnType().getKind();
             if (!(returnKind.equals(DECLARED) || returnKind.equals(TYPEVAR))) {
                 report.addError(

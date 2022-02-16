@@ -44,7 +44,7 @@ public enum RequestKind {
      * A request for a members injection. E.g. {@code void injectMembers(FooType);}. Can only be
      * requested by component interfaces.
      * <p>
-     * 字面意思是仅仅被component接口请求
+     * 作为成员注入该component：component类中的方法有且仅有一个参数,返回类型是void或参数类型和方法返回类型必须一致
      */
     MEMBERS_INJECTION,
 

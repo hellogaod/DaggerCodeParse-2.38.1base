@@ -7,6 +7,7 @@ import javax.lang.model.element.TypeElement;
 
 import dagger.internal.codegen.compileroption.CompilerOptions;
 import dagger.internal.codegen.compileroption.ValidationType;
+import dagger.spi.model.BindingGraph;
 
 /**
  * Validates a {@link BindingGraph}.
@@ -39,5 +40,33 @@ public final class BindingGraphValidator {
 
     private boolean requiresFullBindingGraphValidation() {
         return !compilerOptions.fullBindingGraphValidationType().equals(ValidationType.NONE);
+    }
+
+    /** Returns {@code true} if no errors are reported for {@code graph}. */
+    public boolean isValid(BindingGraph graph) {
+        return visitValidationPlugins(graph) && visitExternalPlugins(graph);
+    }
+
+    /** Returns {@code true} if validation plugins report no errors. */
+    private boolean visitValidationPlugins(BindingGraph graph) {
+        if (graph.isFullBindingGraph() && !requiresFullBindingGraphValidation()) {
+            return true;
+        }
+
+        return validationPlugins.visit(graph);
+    }
+
+    /** Returns {@code true} if external plugins report no errors. */
+    private boolean visitExternalPlugins(BindingGraph graph) {
+        TypeElement component = graph.rootComponentNode().componentPath().currentComponent().java();
+        if (graph.isFullBindingGraph()
+                // TODO(b/135938915): Consider not visiting plugins if only
+                // fullBindingGraphValidation is enabled.
+                && !requiresFullBindingGraphValidation()
+                && !compilerOptions.pluginsVisitFullBindingGraphs(component)) {
+            return true;
+        }
+
+        return externalPlugins.visit(graph);
     }
 }

@@ -43,10 +43,10 @@ public interface BindingGraphValidationModule {
                 validation9,
                 validation10,
                 validation11);
-//        if (compilerOptions.experimentalDaggerErrorMessages()) {
-//            return ImmutableSet.of(factory.create(plugins, "Dagger/Validation"));
-//        } else {
+        if (compilerOptions.experimentalDaggerErrorMessages()) {
+            return ImmutableSet.of(factory.create(plugins, "Dagger/Validation"));
+        } else {
             return plugins;
-//        }
+        }
     }
 }

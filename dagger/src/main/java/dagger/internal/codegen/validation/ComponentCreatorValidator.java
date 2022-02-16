@@ -82,12 +82,11 @@ public final class ComponentCreatorValidator implements ClearableCache {
 
         ImmutableSet<ComponentCreatorAnnotation> creatorAnnotations = getCreatorAnnotations(type);
 
-        //1.component Factory or Builder 注解最多只能使用其中的1个
+        //1. creator节点上的creatorAnnotation注解最多只能使用一个；
         if (!validateOnlyOneCreatorAnnotation(creatorAnnotations, report)) {
             return report.build();
         }
 
-        //2.继续对使用该注解的节点校验
         // Note: there's more validation in ComponentDescriptorValidator:
         // - to make sure the setter methods/factory parameters mirror the deps
         // - to make sure each type or key is set by only one method or parameter
@@ -137,31 +136,56 @@ public final class ComponentCreatorValidator implements ClearableCache {
         /**
          * Validates the creator type.
          * <p>
-         * 使用component Builder 或Factory注解的节点校验入口：核心方法
+         * 校验入口：
          */
         final ValidationReport validate() {
 
-            //1.所在的父类component一定使用annotation.componentAnnotation()的注解，否则报错
+            //2. creator节点所在的父级节点一定是componentAll节点;
             if (!isAnnotationPresent(component, annotation.componentAnnotation())) {
                 report.addError(messages.mustBeInComponent());
             }
 
             // If the type isn't a class or interface, don't validate anything else since the rest of the
             // messages will be bogus.
-            //2.针对使用Builder或Factory的注解的类或接口校验：接口完全没问题，如果是类那么只能有一个无参的默认构造函数
+            //3. creator节点只能是类或接口，并且如果是类的话，该类只能存在一个无参非private修饰的构造函数；
             if (!validateIsClassOrInterface()) {
                 return report.build();
             }
 
-            //3.（疑问）校验使用Builder或Factory的注解的类上的泛型和修饰符:不能使用泛型类型,不能使用private修饰，必须使用static修饰，必须使用abstract修饰
+            //4. creator节点不能使用泛型，并且creatorMethod不能使用private修饰，必须使用static和abstract修饰：
+            // - 存在疑点，creator如果是一个接口，creatorMethod没有使用static和abstract修饰也是没有问题的
             validateTypeRequirements();
 
-            //4.针对Factory和Builder做分别校验
+            //针对Factory和Builder做分别校验
             switch (annotation.creatorKind()) {
                 case FACTORY:
+                    //5. 如果creator节点是factory类型：
+                    // - （1）非private、非static、abstract修饰的（包括继承的）的factoryMethod方法有且仅有一个；
+                    // - （2）factoryMethod方法不允许使用泛型；
+                    // - （3）factoryMethod方法返回类型必须是componentAll节点（factoryMethod父级creator节点的父级componentAll节点）或componentAll的继承类；
+                    // - 注：factoryMethod方法返回类型是componentAll节点的继承类，并且componentAll节点中的如果没有componentMethod方法，会报警告；
+                    // - （4）factoryMethod方法不能使用@BindsInstance修饰;
+                    // - （5） factoryMethod方法参数要么是@BindsInstance修饰 || 要么不使用原始类型；
                     validateFactory();
                     break;
                 case BUILDER:
+                    //6. 如果creator节点是builder类型：
+                    //
+                    // - （1）如果当前builder是kotlin文件，那么builderMethod不要使用了java的关键字；
+                    //
+                    // - （2）builderMethod方法总共能有两种：有且仅有一个参数的setterMethod方法和无参的buildMethod方法：
+                    //
+                    //  - ① buildMethod方法有且仅有一个，并且不允许使用泛型类型；
+                    //
+                    //  - ② buildMethod方法返回类型必须是componenteAll节点（buildMethod方法父级creator节点的父级componentAll节点）或componentAll继承类；
+                    //
+                    //  - 注：buildMethod方法返回类型是componentAll节点的继承类，并且componentAll节点中的如果没有componentMethod方法，会报警告;
+                    //
+                    //  - ③ buildMethod方法不允许使用@BindsInstance修饰;
+                    //
+                    //  - ④ setterMethod方法不能使用泛型，并且方法返回类型是void || 是builder节点及其子类；
+                    //
+                    //  - ⑤ setterMethod方法和方法参数不允许同时使用@BindsInstance修饰，如果setterMethod方法和方法参数都没有使用@BindsInstance修饰，那么setterMethod方法参数不能使用原始类型；
                     validateBuilder();
             }
 
@@ -170,9 +194,6 @@ public final class ComponentCreatorValidator implements ClearableCache {
 
         /**
          * Validates that the type is a class or interface type and returns true if it is.
-         * <p>
-         * 如果是类，校验其构造函数（构造函数有且仅有一个，并且构造函数没有参数也不能使用private修饰，即默认构造函数）；、
-         * 如果是接口，直接返回true；其他类型都报错
          */
         private boolean validateIsClassOrInterface() {
             switch (type.getKind()) {
@@ -187,7 +208,7 @@ public final class ComponentCreatorValidator implements ClearableCache {
             return false;
         }
 
-        //构造函数有且仅有一个，并且构造函数没有参数也不能使用private修饰(即默认构造函数)
+        //该类只能存在一个无参非private修饰的构造函数
         private void validateConstructor() {
             List<? extends Element> allElements = type.getEnclosedElements();
             List<ExecutableElement> constructors = ElementFilter.constructorsIn(allElements);
@@ -211,13 +232,12 @@ public final class ComponentCreatorValidator implements ClearableCache {
          */
         private void validateTypeRequirements() {
 
-
-            //1.不能使用泛型类型
+            //creator节点不能使用泛型类型
             if (!type.getTypeParameters().isEmpty()) {
                 report.addError(messages.generics());
             }
 
-            //2.不能使用private修饰，必须使用static修饰，必须使用abstract修饰
+            //creatorMethod不能使用private修饰，必须使用static修饰，必须使用abstract修饰
             Set<Modifier> modifiers = type.getModifiers();
             if (modifiers.contains(PRIVATE)) {
                 report.addError(messages.isPrivate());
@@ -233,14 +253,13 @@ public final class ComponentCreatorValidator implements ClearableCache {
 
         //校验使用Builder注解的节点
         private void validateBuilder() {
-            //1.校验如果是kotlin文件不允许使用java关键字作为方法名
+            //校验如果是kotlin文件不允许使用java关键字作为方法名
             validateClassMethodName();
 
             ExecutableElement buildMethod = null;
-            //2.校验返回类的非private、非static、abstract修饰的方法
+            //非private、非static、abstract修饰的（包括继承的）方法
             //1）.该方法参数最多只允许1个，否则报错
             //2）.方法无参校验方法返回类型：方法返回类型必须是component类型或其子类
-            //3）.方法有且仅有一个参数,请确保返回类型有效。
             for (ExecutableElement method : elements.getUnimplementedMethods(type)) {
 
                 switch (method.getParameters().size()) {
@@ -272,7 +291,7 @@ public final class ComponentCreatorValidator implements ClearableCache {
                 }
             }
 
-            //3.一定需要有非private、非static、abstract修饰的方法，并且方法不允许使用泛型类型，否则报错
+            //3.buildMethod方法有且仅有一个，并且该方法不允许使用泛型类型，否则报错
             if (buildMethod == null) {
                 report.addError(messages.missingFactoryMethod());
             } else {
@@ -299,7 +318,7 @@ public final class ComponentCreatorValidator implements ClearableCache {
         //对使用Builder注解的类里面的有且仅有一个参数的方法校验：
         private void validateSetterMethod(ExecutableElement method) {
 
-            //1.返回类型不能是void && 方法返回类型必须是component.ayType类型或其子类，否则报错
+            // 返回类型不是void && 方法返回类型必须不是builder类型或其子类，否则报错
             TypeMirror returnType = types.resolveExecutableType(method, type.asType()).getReturnType();
             if (returnType.getKind() != TypeKind.VOID && !types.isSubtype(type.asType(), returnType)) {
                 error(
@@ -308,7 +327,7 @@ public final class ComponentCreatorValidator implements ClearableCache {
                         messages.inheritedSetterMethodsMustReturnVoidOrBuilder());
             }
 
-            //2.方法不允许使用泛型类型
+            //方法不允许使用泛型类型
             validateNotGeneric(method);
 
             VariableElement parameter = method.getParameters().get(0);
@@ -317,7 +336,7 @@ public final class ComponentCreatorValidator implements ClearableCache {
             boolean parameterIsBindsInstance = isAnnotationPresent(parameter, TypeNames.BINDS_INSTANCE);
             boolean bindsInstance = methodIsBindsInstance || parameterIsBindsInstance;
 
-            //3.该方法和方法参数不能同时使用@BindsInstance注解修饰
+            //该方法和方法参数不能同时使用@BindsInstance注解修饰
             if (methodIsBindsInstance && parameterIsBindsInstance) {
                 error(
                         method,
@@ -325,7 +344,7 @@ public final class ComponentCreatorValidator implements ClearableCache {
                         messages.inheritedBindsInstanceNotAllowedOnBothSetterMethodAndParameter());
             }
 
-            //4.如果参数是原始类型 && 方法或方法参数使用了@BindsInstance注解，则会报错。
+            //方法或方法参数都没有使用了@BindsInstance注解 && 如果参数是原始类型，则会报错。
             if (!bindsInstance && parameter.asType().getKind().isPrimitive()) {
                 error(
                         method,
@@ -336,7 +355,7 @@ public final class ComponentCreatorValidator implements ClearableCache {
 
         //Factory注解修饰的节点校验
         private void validateFactory() {
-            //1.非private，非static，abstract修饰的方法有且仅有一个，否则报错
+            //非private、非static、abstract修饰的（包括继承的）方法
             ImmutableList<ExecutableElement> abstractMethods =
                     elements.getUnimplementedMethods(type).asList();
 
@@ -355,7 +374,6 @@ public final class ComponentCreatorValidator implements ClearableCache {
                     return;
             }
 
-            //2.对唯一非private，非static，abstract修饰的方法进行校验
             validateFactoryMethod(getOnlyElement(abstractMethods));
         }
 
@@ -365,17 +383,17 @@ public final class ComponentCreatorValidator implements ClearableCache {
          * Factory里面的方法校验
          */
         private void validateFactoryMethod(ExecutableElement method) {
-            //1.方法不允许使用泛型类型
+            //方法不允许使用泛型类型
             validateNotGeneric(method);
 
-            //2.对方法返回类型进行校验
+            //校验方法返回类型
             if (!validateFactoryMethodReturnType(method)) {
                 // If we can't determine that the single method is a valid factory method, don't bother
                 // validating its parameters.
                 return;
             }
 
-            //3.方法参数校验：如果方法参数没有使用@BindsInstance修饰 && 并且是原始类型 则报错
+            // factoryMethod方法参数要么是@BindsInstance修饰 || 要么不使用原始类型
             for (VariableElement parameter : method.getParameters()) {
                 if (!isAnnotationPresent(parameter, TypeNames.BINDS_INSTANCE)
                         && parameter.asType().getKind().isPrimitive()) {
@@ -397,7 +415,10 @@ public final class ComponentCreatorValidator implements ClearableCache {
 
             TypeMirror returnType = types.resolveExecutableType(method, type.asType()).getReturnType();
 
-            //1.方法返回类型必须是component.ayType类型或其子类，否则报错
+            //isSameType(componentType.asType(), returnType)：returnType是component类型
+            //isSubtype(component.asType(), returnType):returnType是component或其子类
+
+            //方法返回类型必须是component节点或其子类，否则报错
             if (!types.isSubtype(component.asType(), returnType)) {
                 error(
                         method,
@@ -406,7 +427,7 @@ public final class ComponentCreatorValidator implements ClearableCache {
                 return false;
             }
 
-            //2.方法不能使用@BindsInstance注解修饰
+            //方法不能使用@BindsInstance注解修饰
             if (isAnnotationPresent(method, TypeNames.BINDS_INSTANCE)) {
                 error(
                         method,
@@ -417,10 +438,10 @@ public final class ComponentCreatorValidator implements ClearableCache {
 
             TypeElement componentType = MoreElements.asType(component);
 
-            //如果方法返回类型和该方法所在类（creator或接口）所在类（component或接口）的类型不相同
+            //如果方法返回类型是componentAll的子类
             if (!types.isSameType(componentType.asType(), returnType)) {
 
-                //获取component所有非继承方法集合，如果不为空，报警告
+                //当前componentAll节点的方法
                 ImmutableSet<ExecutableElement> methodsOnlyInComponent =
                         methodsOnlyInComponent(componentType);
 

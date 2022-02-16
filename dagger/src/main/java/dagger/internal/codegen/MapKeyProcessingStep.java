@@ -1,12 +1,15 @@
 package dagger.internal.codegen;
 
+import com.google.auto.common.MoreTypes;
 import com.google.common.collect.ImmutableSet;
 import com.squareup.javapoet.ClassName;
 
 import java.util.Set;
 
 import javax.inject.Inject;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
+import javax.lang.model.type.DeclaredType;
 
 import androidx.room.compiler.processing.XMessager;
 import androidx.room.compiler.processing.XTypeElement;
@@ -19,6 +22,9 @@ import dagger.internal.codegen.validation.TypeCheckingProcessingStep;
 import dagger.internal.codegen.validation.ValidationReport;
 import dagger.internal.codegen.writing.AnnotationCreatorGenerator;
 import dagger.internal.codegen.writing.UnwrappedMapKeyGenerator;
+
+import static dagger.internal.codegen.binding.MapKeys.getUnwrappedMapKeyType;
+import static javax.lang.model.element.ElementKind.ANNOTATION_TYPE;
 
 /**
  * The annotation processor responsible for validating the mapKey annotation and auto-generate
@@ -60,9 +66,24 @@ final class MapKeyProcessingStep extends TypeCheckingProcessingStep<XTypeElement
         ValidationReport mapKeyReport = mapKeyValidator.validate(mapKeyAnnotationType);
         mapKeyReport.printMessagesTo(messager);
 
-//        if (mapKeyReport.isClean()) {
-//
-//        }
+        if (mapKeyReport.isClean()) {
+            MapKey mapkey = mapKeyAnnotationType.getAnnotation(MapKey.class);
+
+            //如果mapKey#unwrapValue = false
+            if (!mapkey.unwrapValue()) {
+                annotationCreatorGenerator.generate(mapKeyAnnotationType, messager);
+            }
+            //如果获取使用MapKey注解修饰的注解里面唯一的方法返回类型还是一个注解
+            else if (unwrappedValueKind(mapKeyAnnotationType).equals(ANNOTATION_TYPE)) {
+                unwrappedMapKeyGenerator.generate(mapKeyAnnotationType, messager);
+            }
+        }
     }
 
+    //获取使用MapKey注解修饰的注解里面唯一的方法返回类型
+    private ElementKind unwrappedValueKind(TypeElement mapKeyAnnotationType) {
+        DeclaredType unwrappedMapKeyType =
+                getUnwrappedMapKeyType(MoreTypes.asDeclared(mapKeyAnnotationType.asType()), types);
+        return unwrappedMapKeyType.asElement().getKind();
+    }
 }

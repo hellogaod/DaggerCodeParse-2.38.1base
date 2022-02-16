@@ -89,10 +89,10 @@ final class ComponentHjarProcessingStep extends TypeCheckingProcessingStep<XType
     private void processRootComponent(TypeElement element) {
         ValidationReport validationReport = componentValidator.validate(element);
         validationReport.printMessagesTo(messager);
-//        if (validationReport.isClean()) {
-//            componentGenerator.generate(
-//                    componentDescriptorFactory.rootComponentDescriptor(element), messager);
-//        }
+        if (validationReport.isClean()) {
+            componentGenerator.generate(
+                    componentDescriptorFactory.rootComponentDescriptor(element), messager);
+        }
     }
 
     private void processRootCreator(TypeElement creator) {

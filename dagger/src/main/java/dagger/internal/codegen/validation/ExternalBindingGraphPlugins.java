@@ -11,7 +11,11 @@ import androidx.room.compiler.processing.XFiler;
 import dagger.internal.codegen.compileroption.ProcessingOptions;
 import dagger.internal.codegen.langmodel.DaggerElements;
 import dagger.internal.codegen.langmodel.DaggerTypes;
+import dagger.model.BindingGraph;
+import dagger.spi.DiagnosticReporter;
 import dagger.spi.model.BindingGraphPlugin;
+
+import static javax.tools.Diagnostic.Kind.ERROR;
 
 /**
  * Initializes {@link BindingGraphPlugin}s.
@@ -39,5 +43,22 @@ public final class ExternalBindingGraphPlugins {
         this.types = types;
         this.elements = elements;
         this.processingOptions = processingOptions;
+    }
+
+    /** Returns {@code false} if any of the plugins reported an error. */
+    boolean visit(dagger.spi.model.BindingGraph spiGraph) {
+        BindingGraph graph = ExternalBindingGraphConverter.fromSpiModel(spiGraph);
+        boolean isClean = true;
+        for (BindingGraphPlugin plugin : plugins) {
+            DiagnosticReporterFactory.DiagnosticReporterImpl spiReporter =
+                    diagnosticReporterFactory.reporter(
+                            spiGraph, plugin.pluginName(), /* reportErrorsAsWarnings= */ false);
+            DiagnosticReporter reporter = ExternalBindingGraphConverter.fromSpiModel(spiReporter);
+            plugin.visitGraph(graph, reporter);
+            if (spiReporter.reportedDiagnosticKinds().contains(ERROR)) {
+                isClean = false;
+            }
+        }
+        return isClean;
     }
 }

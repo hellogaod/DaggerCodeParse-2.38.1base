@@ -9,6 +9,7 @@ import com.squareup.javapoet.ClassName;
 
 import java.io.Writer;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.element.AnnotationValue;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Name;
 import javax.lang.model.element.PackageElement;
@@ -45,9 +47,11 @@ import javax.lang.model.util.Types;
 import dagger.Reusable;
 import dagger.internal.codegen.base.ClearableCache;
 
+import static com.google.auto.common.MoreElements.asExecutable;
 import static com.google.auto.common.MoreElements.hasModifiers;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Lists.asList;
+import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toSet;
 import static javax.lang.model.element.Modifier.ABSTRACT;
 
@@ -91,10 +95,10 @@ public final class DaggerElements implements Elements, ClearableCache {
                 type, k -> MoreElements.getLocalAndInheritedMethods(type, types, elements));
     }
 
-    //返回类的非private、非static、abstract修饰的方法
+    //类的非private、非static、abstract修饰的（包括继承的）方法
     public ImmutableSet<ExecutableElement> getUnimplementedMethods(TypeElement type) {
         return FluentIterable.from(getLocalAndInheritedMethods(type))
-                .filter(hasModifiers(ABSTRACT))
+                .filter(hasModifiers(ABSTRACT))//abstract修饰，当然了，如果是接口不存在abstract修饰一说
                 .toSet();
     }
 
@@ -134,6 +138,25 @@ public final class DaggerElements implements Elements, ClearableCache {
     }
 
     /**
+     * Compares elements according to their declaration order among siblings. Only valid to compare
+     * elements enclosed by the same parent.
+     * <p>
+     * 根据元素在同级之间的声明顺序比较元素。 仅对比较由同一个父元素包围的元素有效。
+     */
+    public static final Comparator<Element> DECLARATION_ORDER =
+            comparing(element -> siblings(element).indexOf(element));
+
+
+    // For parameter elements, element.getEnclosingElement().getEnclosedElements() is empty. So
+    // instead look at the parameter list of the enclosing executable.
+    private static List<? extends Element> siblings(Element element) {
+        //如果当前element表示参数，那么获取其所在方法的所有参数；否则，获取当前节点所在父节点的所有节点。
+        return element.getKind().equals(ElementKind.PARAMETER)
+                ? asExecutable(element.getEnclosingElement()).getParameters()
+                : element.getEnclosingElement().getEnclosedElements();
+    }
+
+    /**
      * Returns {@code true} iff the given element has an {@link AnnotationMirror} whose {@linkplain
      * AnnotationMirror#getAnnotationType() annotation type} has the same canonical name as any of
      * that of {@code annotationClasses}.
@@ -148,6 +171,22 @@ public final class DaggerElements implements Elements, ClearableCache {
             }
         }
         return false;
+    }
+
+    @SafeVarargs
+    public static boolean isAnyAnnotationPresent(
+            Element element, ClassName first, ClassName... otherAnnotations) {
+        return isAnyAnnotationPresent(element, asList(first, otherAnnotations));
+    }
+
+    /**
+     * Returns {@code true} iff the given element has an {@link AnnotationMirror} whose {@linkplain
+     * AnnotationMirror#getAnnotationType() annotation type} is equivalent to {@code annotationType}.
+     */
+    public static boolean isAnnotationPresent(Element element, TypeMirror annotationType) {
+        return element.getAnnotationMirrors().stream()
+                .map(AnnotationMirror::getAnnotationType)
+                .anyMatch(candidate -> MoreTypes.equivalence().equivalent(candidate, annotationType));
     }
 
     /**
@@ -393,6 +432,18 @@ public final class DaggerElements implements Elements, ClearableCache {
                     return element.getSimpleName().toString();
                 }
             };
+
+    /**
+     * Invokes {@link Elements#getTypeElement(CharSequence)}, throwing {@link TypeNotPresentException}
+     * if it is not accessible in the current compilation.
+     */
+    public TypeElement checkTypePresent(String typeName) {
+        TypeElement type = elements.getTypeElement(typeName);
+        if (type == null) {
+            throw new TypeNotPresentException(typeName, null);
+        }
+        return type;
+    }
 
     @Override
     public PackageElement getPackageElement(CharSequence name) {

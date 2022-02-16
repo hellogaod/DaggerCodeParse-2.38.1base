@@ -36,6 +36,6 @@ public final class MonitoringModuleProcessingStep extends TypeCheckingProcessing
 
     @Override
     protected void process(XTypeElement productionComponent, ImmutableSet<ClassName> annotations) {
-
+        monitoringModuleGenerator.generate(productionComponent, messager);
     }
 }

@@ -971,8 +971,11 @@ final class DaggerComponentProcessor_ProcessorComponent implements ComponentProc
         ComponentProcessor_MembersInjector.injectMembersInjectorGenerator(instance, sourceFileGeneratorOfMembersInjectionBinding());
 
         ComponentProcessor_MembersInjector.injectProcessingSteps(instance, immutableListOfXProcessingStep());
+
         ComponentProcessor_MembersInjector.injectValidationBindingGraphPlugins(instance, validationBindingGraphPlugins());
+
         ComponentProcessor_MembersInjector.injectExternalBindingGraphPlugins(instance, externalBindingGraphPlugins());
+
         ComponentProcessor_MembersInjector.injectClearableCaches(instance, setOfClearableCache());
         return instance;
     }

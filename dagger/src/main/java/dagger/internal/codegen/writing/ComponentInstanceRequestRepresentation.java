@@ -1,29 +1,34 @@
 package dagger.internal.codegen.writing;
 
+import com.squareup.javapoet.ClassName;
+import com.squareup.javapoet.CodeBlock;
+
 import dagger.assisted.Assisted;
 import dagger.assisted.AssistedFactory;
 import dagger.assisted.AssistedInject;
 import dagger.internal.codegen.binding.ContributionBinding;
+import dagger.internal.codegen.javapoet.Expression;
 
-/**
- * Copyright (C), 2019-2021, 佛生
- * FileName: ComponentInstanceRequestRepresentation
- * Author: 佛学徒
- * Date: 2021/10/25 11:15
- * Description:
- * History:
- */
-class ComponentInstanceRequestRepresentation {
-
+/** A binding expression for the instance of the component itself, i.e. {@code this}. */
+final class ComponentInstanceRequestRepresentation extends SimpleInvocationRequestRepresentation {
     private final ComponentImplementation componentImplementation;
     private final ContributionBinding binding;
 
     @AssistedInject
     ComponentInstanceRequestRepresentation(
             @Assisted ContributionBinding binding, ComponentImplementation componentImplementation) {
-
+        super(binding);
         this.componentImplementation = componentImplementation;
         this.binding = binding;
+    }
+
+    @Override
+    Expression getDependencyExpression(ClassName requestingClass) {
+        return Expression.create(
+                binding.key().type().java(),
+                componentImplementation.name().equals(requestingClass)
+                        ? CodeBlock.of("this")
+                        : componentImplementation.componentFieldReference());
     }
 
     @AssistedFactory
