@@ -323,11 +323,11 @@ public final class ComponentValidator implements ClearableCache {
                 //2. 如果componentMethod方法的returnType返回类型使用了subcomponentAnnotation注解,校验
                 if (subcomponentAnnotation.isPresent()) {
 
-                    // - (1)收集subcomponent关联的module节点：
+                    // - (1)当前componentMethod方法的参数必须是module节点，并且该方法只允许一次同一类型的module节点，并且这个module节点来源于（2）-subcomponent关联的module节点
+                    //- (2)收集subcomponent关联的module节点：
                     // ①subcomponentAnnotation#modules里面的module节点；
                     // ②条件①module节点上的注解moduleAnnotation#includes里面的module节点；
                     // ③条件①和条件②的module节点的父级module（使用了moduleAnnotation注解）节点；
-                    //- (2)当前componentMethod方法的参数必须是module节点，并且该方法只允许一次同一类型的module节点，并且这个module节点来源于（1）-subcomponent关联的module节点
                     validateSubcomponentFactoryMethod(subcomponentAnnotation.get());
 
                 }
