@@ -174,7 +174,7 @@ public final class BindingGraphFactory implements ClearableCache {
                             //删除绑定元素，因为我们知道这会有所不同，但我们希望其他所有内容都相同以将其视为重复项。
                             binding.toBuilder().clearBindingElement().build())) {
 
-                        //对component#dependencies里面的类的无参返回类型不是void的所有方法生成ContributionBinding绑定对象
+                        //对component#dependencies里面的dependency类的无参返回类型不是void的所有方法生成ContributionBinding绑定对象
                         explicitBindingsBuilder.add(binding);
                     }
                 }
