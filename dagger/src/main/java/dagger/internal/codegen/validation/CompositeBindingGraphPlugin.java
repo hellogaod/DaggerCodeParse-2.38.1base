@@ -3,9 +3,14 @@ package dagger.internal.codegen.validation;
 import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.FormatMethod;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
+import javax.annotation.processing.Filer;
 import javax.inject.Inject;
+import javax.lang.model.util.Elements;
+import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
 
 import dagger.spi.model.BindingGraph;
@@ -17,6 +22,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Lists.asList;
 import static dagger.internal.codegen.base.ElementFormatter.elementToString;
+import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSet;
 import static dagger.internal.codegen.langmodel.DaggerElements.transitivelyEncloses;
 
 public final class CompositeBindingGraphPlugin implements BindingGraphPlugin{
@@ -58,6 +64,37 @@ public final class CompositeBindingGraphPlugin implements BindingGraphPlugin{
             plugin.visitGraph(bindingGraph, aggregatingDiagnosticReporter);
         });
         aggregatingDiagnosticReporter.report();
+    }
+
+    @Override
+    public void initFiler(Filer filer) {
+        plugins.forEach(plugin -> plugin.initFiler(filer));
+    }
+
+    @Override
+    public void initTypes(Types types) {
+        plugins.forEach(plugin -> plugin.initTypes(types));
+    }
+
+    @Override
+    public void initElements(Elements elements) {
+        plugins.forEach(plugin -> plugin.initElements(elements));
+    }
+
+    @Override
+    public void initOptions(Map<String, String> options) {
+        plugins.forEach(plugin -> plugin.initOptions(options));
+    }
+
+    @Override
+    public Set<String> supportedOptions() {
+        return plugins.stream().flatMap(
+                plugin -> plugin.supportedOptions().stream()).collect(toImmutableSet());
+    }
+
+    @Override
+    public String pluginName() {
+        return pluginName;
     }
 
     // TODO(erichang): This kind of breaks some of the encapsulation by relying on or repeating

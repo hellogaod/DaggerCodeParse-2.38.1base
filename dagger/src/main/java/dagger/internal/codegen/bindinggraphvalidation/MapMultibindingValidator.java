@@ -80,6 +80,8 @@ final class MapMultibindingValidator implements BindingGraphPlugin {
      *   <li>{@code Map<K, Provider<V>>}
      *   <li>{@code Map<K, Producer<V>>}
      * </ol>
+     *
+     * key如果是Map<K, X>,找出该key匹配到的所有Binding绑定类型，有Map<K, V>，Map<K, Provider<V>>，Map<K, Producer<V>>
      */
     private ImmutableSet<Binding> mapMultibindings(BindingGraph bindingGraph) {
         ImmutableSetMultimap<Key, Binding> mapMultibindings =

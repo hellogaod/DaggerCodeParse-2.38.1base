@@ -43,7 +43,11 @@ import static dagger.internal.codegen.extension.DaggerStreams.toImmutableList;
 import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSet;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
-/** Reports errors for dependency cycles. */
+/**
+ * Reports errors for dependency cycles.
+ * <p>
+ * 校验有向图的边的依赖是否存在循环
+ */
 class DependencyCycleValidator implements BindingGraphPlugin {
 
 
@@ -64,7 +68,8 @@ class DependencyCycleValidator implements BindingGraphPlugin {
         ImmutableNetwork<BindingGraph.Node, BindingGraph.DependencyEdge> dependencyGraph =
                 nonCycleBreakingDependencyGraph(bindingGraph);
         // First check the graph for a cycle. If there is one, then we'll do more work to report where.
-        if (!Graphs.hasCycle(dependencyGraph)) {
+        //首先检查有向图是否有循环。 如果有的话，我们会做更多的工作来报告在哪里。
+        if (!Graphs.hasCycle(dependencyGraph)) { //没有循环，那么直接返回即可
             return;
         }
         // Check each endpoint pair only once, no matter how many parallel edges connect them.
@@ -231,7 +236,11 @@ class DependencyCycleValidator implements BindingGraphPlugin {
                 .get();
     }
 
-    /** Returns the subgraph containing only {@link BindingGraph.DependencyEdge}s that would not break a cycle. */
+    /**
+     * Returns the subgraph containing only {@link BindingGraph.DependencyEdge}s that would not break a cycle.
+     * <p>
+     * 返回仅包含不会破坏循环的 {@link BindingGraph.DependencyEdge} 的子图。
+     */
     // TODO(dpb): Return a network containing only Binding nodes.
     private ImmutableNetwork<BindingGraph.Node, BindingGraph.DependencyEdge> nonCycleBreakingDependencyGraph(
             BindingGraph bindingGraph) {
@@ -240,6 +249,8 @@ class DependencyCycleValidator implements BindingGraphPlugin {
                         .expectedNodeCount(bindingGraph.network().nodes().size())
                         .expectedEdgeCount(bindingGraph.dependencyEdges().size())
                         .build();
+
+        //发掘多余的边:例如，如果边的依赖的key属性有multibindingContributionIdentifier属性，那么表示存在多余的边
         bindingGraph.dependencyEdges().stream()
                 .filter(edge -> !breaksCycle(edge, bindingGraph))
                 .forEach(
@@ -263,14 +274,18 @@ class DependencyCycleValidator implements BindingGraphPlugin {
          */
         abstract ImmutableSet<EndpointPair<N>> endpointPairs();
 
-        /** Returns the nodes that participate in the cycle. */
+        /**
+         * Returns the nodes that participate in the cycle.
+         */
         ImmutableSet<N> nodes() {
             return endpointPairs().stream()
                     .flatMap(pair -> Stream.of(pair.source(), pair.target()))
                     .collect(toImmutableSet());
         }
 
-        /** Returns the number of edges in the cycle. */
+        /**
+         * Returns the number of edges in the cycle.
+         */
         int size() {
             return endpointPairs().size();
         }

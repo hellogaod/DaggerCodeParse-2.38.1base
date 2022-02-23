@@ -28,6 +28,7 @@ import static javax.tools.Diagnostic.Kind.ERROR;
 /**
  * Reports an error for any component that uses bindings with scopes that are not assigned to the
  * component.
+ * 报告任何使用具有未分配给组件的范围的绑定的组件的错误。
  */
 final class IncompatiblyScopedBindingsValidator implements BindingGraphPlugin {
 

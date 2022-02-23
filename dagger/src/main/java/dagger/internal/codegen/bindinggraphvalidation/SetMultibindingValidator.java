@@ -43,6 +43,7 @@ final class SetMultibindingValidator implements BindingGraphPlugin {
             Binding binding, BindingGraph bindingGraph, DiagnosticReporter diagnosticReporter) {
         // Map of delegate target key to the original contribution binding
         Multimap<Key, Binding> dereferencedBindsTargets = HashMultimap.create();
+
         for (Binding dep : bindingGraph.requestedBindings(binding)) {
             if (dep.kind().equals(DELEGATE)) {
                 dereferencedBindsTargets.put(dereferenceDelegateBinding(dep, bindingGraph), dep);

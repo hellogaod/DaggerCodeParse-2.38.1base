@@ -2,12 +2,15 @@ package dagger.internal.codegen.validation;
 
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 
 import java.util.Map;
+import java.util.Set;
 
 import javax.inject.Inject;
 
 import androidx.room.compiler.processing.XFiler;
+import androidx.room.compiler.processing.compat.XConverters;
 import dagger.internal.codegen.compileroption.ProcessingOptions;
 import dagger.internal.codegen.langmodel.DaggerElements;
 import dagger.internal.codegen.langmodel.DaggerTypes;
@@ -15,6 +18,7 @@ import dagger.model.BindingGraph;
 import dagger.spi.DiagnosticReporter;
 import dagger.spi.model.BindingGraphPlugin;
 
+import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSet;
 import static javax.tools.Diagnostic.Kind.ERROR;
 
 /**
@@ -43,6 +47,29 @@ public final class ExternalBindingGraphPlugins {
         this.types = types;
         this.elements = elements;
         this.processingOptions = processingOptions;
+    }
+
+    /** Returns {@link BindingGraphPlugin#supportedOptions()} from all the plugins. */
+    public ImmutableSet<String> allSupportedOptions() {
+        return plugins.stream()
+                .flatMap(plugin -> plugin.supportedOptions().stream())
+                .collect(toImmutableSet());
+    }
+
+    /** Initializes the plugins. */
+    // TODO(ronshapiro): Should we validate the uniqueness of plugin names?
+    public void initializePlugins() {
+        plugins.forEach(this::initializePlugin);
+    }
+
+    private void initializePlugin(BindingGraphPlugin plugin) {
+        plugin.initFiler(XConverters.toJavac(filer));
+        plugin.initTypes(types);
+        plugin.initElements(elements);
+        Set<String> supportedOptions = plugin.supportedOptions();
+        if (!supportedOptions.isEmpty()) {
+            plugin.initOptions(Maps.filterKeys(processingOptions, supportedOptions::contains));
+        }
     }
 
     /** Returns {@code false} if any of the plugins reported an error. */

@@ -118,8 +118,8 @@ public class ComponentProcessor extends JavacBasicAnnotationProcessor {
                 .create(getXProcessingEnv(),testingPlugins.orElseGet(this::loadExternalPlugins))
                 .inject(this);
 
-//        validationBindingGraphPlugins.initializePlugins();
-//        externalBindingGraphPlugins.initializePlugins();
+        validationBindingGraphPlugins.initializePlugins();
+        externalBindingGraphPlugins.initializePlugins();
 
         return processingSteps;
     }

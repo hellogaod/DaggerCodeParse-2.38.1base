@@ -179,6 +179,8 @@ public abstract class BindingGraph {
      * Returns the bindings that a given binding directly requests as a dependency. Does not include
      * any {@link MissingBinding}s.
      *
+     * 当前binding依赖对象通过有向边可以达到的Binding对象
+     *
      * @see #requestedMaybeMissingBindings(Binding)
      */
     public ImmutableSet<Binding> requestedBindings(Binding binding) {

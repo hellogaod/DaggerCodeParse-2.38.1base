@@ -59,6 +59,8 @@ final class SubcomponentFactoryMethodValidator implements BindingGraphPlugin {
             return;
         }
         bindingGraph.network().edges().stream()
+                //收集BindingGraph所有的ChildFactoryMethodEdge边：表示component节点中的返回类型是subcomponent节点的componentMethod方法生成的edge边，
+                // 该edge边的源Node节点是component节点，目标Node节点是subcomponent节点；
                 .flatMap(instancesOf(BindingGraph.ChildFactoryMethodEdge.class))
                 .forEach(
                         edge -> {
@@ -72,10 +74,18 @@ final class SubcomponentFactoryMethodValidator implements BindingGraphPlugin {
 
     private ImmutableSet<TypeElement> findMissingModules(
             BindingGraph.ChildFactoryMethodEdge edge, BindingGraph graph) {
+        //当前componentMethod方法的参数：返回类型是subcomponent，参数肯定是module节点
         ImmutableSet<TypeElement> factoryMethodParameters =
                 subgraphFactoryMethodParameters(edge, graph);
+        //表示当前componentMethod方法的返回类型subcomponent生成的target目标Node节点
         BindingGraph.ComponentNode child = (BindingGraph.ComponentNode) graph.network().incidentNodes(edge).target();
+
+        //child及其父级component收集所有module节点
         Sets.SetView<TypeElement> modulesOwnedByChild = ownedModules(child, graph);
+
+        //表示当前返回类型是subcomponent的componentMethod方法，该方法参数是module节点，
+        // 那么module节点必须存在于subcomponent及其父级component关联的module集合中，
+        // 并且这里面的module集合必须表示需要实例化；
         return graph.bindings().stream()
                 // bindings owned by child
                 .filter(binding -> binding.componentPath().equals(child.componentPath()))
