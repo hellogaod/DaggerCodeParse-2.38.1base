@@ -111,7 +111,7 @@ public class AnnotationCreatorGenerator extends SourceFileGenerator<TypeElement>
                         .addModifiers(PUBLIC, STATIC)
                         .returns(TypeName.get(annotationElement.asType()));
 
-        //方法参数是当前注解类中的方法，有多少个方法就有多少个参数
+        //方法参数是当前注解类中的方法返回类型，有多少个方法就有多少个参数
         ImmutableList.Builder<CodeBlock> parameters = ImmutableList.builder();
         for (ExecutableElement annotationMember : methodsIn(annotationElement.getEnclosedElements())) {
             String parameterName = annotationMember.getSimpleName().toString();
