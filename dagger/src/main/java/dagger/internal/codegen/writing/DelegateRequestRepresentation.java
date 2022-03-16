@@ -27,6 +27,8 @@ import static dagger.spi.model.BindingKind.DELEGATE;
 
 /**
  * A {@link dagger.internal.codegen.writing.RequestRepresentation} for {@code @Binds} methods.
+ *
+ * @Binds修饰的bindingMethod方法
  */
 final class DelegateRequestRepresentation extends RequestRepresentation {
 
@@ -54,6 +56,8 @@ final class DelegateRequestRepresentation extends RequestRepresentation {
     /**
      * Returns {@code true} if the {@code @Binds} binding's scope is stronger than the scope of the
      * binding it depends on.
+     * <p>
+     * 如果 {@code @Binds} 绑定的作用域强于它所依赖的绑定作用域，则返回 {@code true}。
      */
     static boolean isBindsScopeStrongerThanDependencyScope(
             ContributionBinding bindsBinding, BindingGraph graph) {
@@ -67,6 +71,7 @@ final class DelegateRequestRepresentation extends RequestRepresentation {
 
     @Override
     Expression getDependencyExpression(ClassName requestingClass) {
+
 
         Expression delegateExpression =
                 componentRequestRepresentations.getDependencyExpression(
@@ -109,12 +114,13 @@ final class DelegateRequestRepresentation extends RequestRepresentation {
         return delegateExpression.castTo(types.erasure(desiredType));
     }
 
-    private enum ScopeKind {
+    private enum ScopeKind {//ordinal 序列越在前越强壮
         UNSCOPED,
-        SINGLE_CHECK,
+        SINGLE_CHECK,//如果是Reusable注解，表示singlecheck
         DOUBLE_CHECK,
         ;
 
+        //scope是不是Reusable，如果是则表示SINGLE_CHECK，否则表示DOUBLE_CHECK；UNSCOPED表示不存在scope注解修饰
         static ScopeKind get(Binding binding) {
             return binding
                     .scope()

@@ -40,8 +40,10 @@ final class OptionalRequestRepresentation extends SimpleInvocationRequestReprese
 
     @Override
     Expression getDependencyExpression(ClassName requestingClass) {
+
         OptionalType optionalType = OptionalType.from(binding.key());
         OptionalType.OptionalKind optionalKind = optionalType.kind();
+
         if (binding.dependencies().isEmpty()) {
             if (sourceVersion.compareTo(SourceVersion.RELEASE_7) <= 0) {
                 // When compiling with -source 7, javac's type inference isn't strong enough to detect

@@ -151,6 +151,8 @@ public abstract class ComponentRequirement {
      * Returns true if the passed {@link ComponentRequirement} requires a passed instance in order to
      * be used within a component.
      * <p>
+     * 如果传递的 {@link ComponentRequirement} 需要传递的实例才能在组件中使用，则返回 true。
+     * <p>
      * 如果类型不是Module，直接返回true；否则进行module是否可以实例化校验，
      * 只有在module类中所有方法不存在abstract和static修饰才表示当前module类可以实例化
      */

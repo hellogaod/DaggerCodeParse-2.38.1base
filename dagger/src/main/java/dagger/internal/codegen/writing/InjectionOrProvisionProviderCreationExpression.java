@@ -39,6 +39,8 @@ final class InjectionOrProvisionProviderCreationExpression
     @Override
     public CodeBlock creationExpression() {
         CodeBlock createFactory =
+                //e.g.AssistedFactoryRequestRepresentation_Factory_Impl.create(assistedFactoryRequestRepresentationProvider);
+                //e.g.AssistedFactoryRequestRepresentation_Factory.create(componentRequestRepresentationsProvider, processorComponent.daggerTypesProvider, processorComponent.daggerElementsProvider)
                 CodeBlock.of(
                         "$T.create($L)",
                         generatedClassNameForBinding(binding),

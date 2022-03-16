@@ -47,6 +47,8 @@ public abstract class FrameworkField {
             TypeName valueTypeName,
             String fieldName
     ) {
+        //当前变量类型被frameworkClassName<valueTypeName> 包裹
+        //如果名称后缀不存在suffix，那么给当前变量名 + suffix后缀，例如injectBindingRegistryImplProvider
         String suffix = frameworkClassName.simpleName();
         return new AutoValue_FrameworkField(
                 ParameterizedTypeName.get(frameworkClassName, valueTypeName),
@@ -63,6 +65,8 @@ public abstract class FrameworkField {
             ContributionBinding binding,
             Optional<ClassName> frameworkClass
     ) {
+        //使用frameworkClass包裹当前binding的key的type，e.g.Provider<T>
+        //命名规则在create方法中处理
         return create(
                 //根据binding.bindingType确定使用哪一种框架类型
                 frameworkClass.orElse(
@@ -72,6 +76,7 @@ public abstract class FrameworkField {
                         )),
                 //被包裹的value
                 TypeName.get(fieldValueType(binding)),
+
                 frameworkFieldName(binding));
     }
 

@@ -113,12 +113,15 @@ public final class ModuleProxies {
      * abstract, no proxy method can be generated.
      */
     private Optional<ExecutableElement> nonPublicNullaryConstructor(TypeElement moduleElement) {
+
         ModuleKind.checkIsModule(moduleElement, metadataUtil);
+        //如果module节点是abstract修饰 || module节点是非static修饰的内部类。直接返回；
         if (moduleElement.getModifiers().contains(ABSTRACT)
                 || (moduleElement.getNestingKind().isNested()
                 && !moduleElement.getModifiers().contains(STATIC))) {
             return Optional.empty();
         }
+        //找出当前module类 可访问 非private修饰 参数为空的 构造函数
         return constructorsIn(elements.getAllMembers(moduleElement)).stream()
                 .filter(constructor -> !Accessibility.isElementPubliclyAccessible(constructor))
                 .filter(constructor -> !constructor.getModifiers().contains(PRIVATE))
@@ -130,10 +133,13 @@ public final class ModuleProxies {
      * Returns a code block that creates a new module instance, either by invoking the nullary
      * constructor if it's accessible from {@code requestingClass} or else by invoking the
      * constructor's generated proxy method.
+     *
+     * 实例化当前module类，使用newInstance代理或直接new
      */
     public CodeBlock newModuleInstance(TypeElement moduleElement, ClassName requestingClass) {
         ModuleKind.checkIsModule(moduleElement, metadataUtil);
         String packageName = requestingClass.packageName();
+        //对当前module的构造函数如果存在非private修饰，并且无参并且可访问
         return nonPublicNullaryConstructor(moduleElement)
                 .filter(constructor -> !isElementAccessibleFrom(constructor, packageName))
                 .map(

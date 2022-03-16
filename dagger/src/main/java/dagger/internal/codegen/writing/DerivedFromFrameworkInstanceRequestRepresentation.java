@@ -16,6 +16,7 @@ import static dagger.internal.codegen.binding.BindingRequest.bindingRequest;
 
 /**
  * A binding expression that depends on a framework instance.
+ * key匹配上的是ProvisionBinding对象，并且bindtype属性是LAZY、PRODUCED或PROVIDER_OF_LAZY
  */
 final class DerivedFromFrameworkInstanceRequestRepresentation extends RequestRepresentation {
     private final BindingRequest bindingRequest;

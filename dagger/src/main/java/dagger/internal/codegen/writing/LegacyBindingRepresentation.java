@@ -121,15 +121,15 @@ final class LegacyBindingRepresentation implements BindingRepresentation {
     @Override
     public RequestRepresentation getRequestRepresentation(BindingRequest request) {
         switch (binding.bindingType()) {
-            case MEMBERS_INJECTION:
+            case MEMBERS_INJECTION://如果是MembersInjectionBinding对象
                 checkArgument(request.isRequestKind(RequestKind.MEMBERS_INJECTION));
                 return membersInjectionRequestRepresentationFactory.create(
                         (MembersInjectionBinding) binding);
 
-            case PROVISION:
+            case PROVISION://如果是ProvisionBinding对象
                 return provisionRequestRepresentation((ContributionBinding) binding, request);
 
-            case PRODUCTION:
+            case PRODUCTION://如果是ProductionBinding对象
                 return productionRequestRepresentation((ContributionBinding) binding, request);
         }
         throw new AssertionError(binding);
@@ -207,7 +207,9 @@ final class LegacyBindingRepresentation implements BindingRepresentation {
                         unscoped.creationExpression());
     }
 
-    /** Returns a binding expression for a provision binding. */
+    /**
+     * Returns a binding expression for a provision binding.
+     */
     private RequestRepresentation provisionRequestRepresentation(
             ContributionBinding binding, BindingRequest request) {
         Key key = request.key();
@@ -237,7 +239,9 @@ final class LegacyBindingRepresentation implements BindingRepresentation {
         throw new AssertionError();
     }
 
-    /** Returns a binding expression for a production binding. */
+    /**
+     * Returns a binding expression for a production binding.
+     */
     private RequestRepresentation productionRequestRepresentation(
             ContributionBinding binding, BindingRequest request) {
         return request.frameworkType().isPresent()
@@ -276,7 +280,9 @@ final class LegacyBindingRepresentation implements BindingRepresentation {
                         producerFromProviderCreationExpressionFactory.create(binding)));
     }
 
-    /** Returns a binding expression for {@link RequestKind#INSTANCE} requests. */
+    /**
+     * Returns a binding expression for {@link RequestKind#INSTANCE} requests.
+     */
     private RequestRepresentation instanceRequestRepresentation(ContributionBinding binding) {
 
         Optional<RequestRepresentation> maybeDirectInstanceExpression =
@@ -316,6 +322,8 @@ final class LegacyBindingRepresentation implements BindingRepresentation {
      * prefer to use a SwitchingProvider instead of static factories in order to reduce class loading;
      * however, we allow static factories that can reused across multiple bindings, e.g. {@code
      * MapFactory} or {@code SetFactory}.
+     * <p>
+     * 是否使用static方法创建  isFastInit在没有使用bazel时始终为false
      */
     private boolean useStaticFactoryCreation() {
         return !isFastInit
@@ -375,6 +383,11 @@ final class LegacyBindingRepresentation implements BindingRepresentation {
      *
      * <p>The component needs to cache the value for scoped bindings except for {@code @Binds}
      * bindings whose scope is no stronger than their delegate's.
+     * <p>
+     * needsCaching(binding):当前bindingMethod方法没有使用scope修饰的注解修饰 || @Binds修饰的bindingMethod使用了scope注解并且比它依赖的key匹配到的绑定对象
+     * 更加强壮（e.g.当前bindingMethod使用了Reusable修饰 并且bindingMethod的依赖的key匹配到的Binding对象使用了非Reusable的scope注解）
+     *
+     * 其实意思就是当前绑定对象是否使用了scope注解。
      */
     private boolean needsCaching(ContributionBinding binding) {
         if (!binding.scope().isPresent()) {

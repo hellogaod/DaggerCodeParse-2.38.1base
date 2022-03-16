@@ -73,6 +73,7 @@ abstract class MemberSelect {
      * injector.
      */
     static Optional<MemberSelect> staticFactoryCreation(ContributionBinding contributionBinding) {
+        //表示当前绑定对象的依赖为空 && 绑定没有使用scope注解
         if (contributionBinding.factoryCreationStrategy().equals(SINGLETON_INSTANCE)
                 && !contributionBinding.scope().isPresent()) {
             switch (contributionBinding.kind()) {
@@ -134,7 +135,9 @@ abstract class MemberSelect {
         }
     }
 
-    /** A {@link MemberSelect} for a factory of an empty map. */
+    /**
+     * A {@link MemberSelect} for a factory of an empty map.
+     */
     private static MemberSelect emptyMapFactory(ContributionBinding contributionBinding) {
         BindingType bindingType = contributionBinding.bindingType();
         ImmutableList<TypeMirror> typeParameters =

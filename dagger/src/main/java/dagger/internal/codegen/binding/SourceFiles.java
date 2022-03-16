@@ -210,7 +210,7 @@ public class SourceFiles {
                 return ImmutableList.of();
             }
         }
-        //当前绑定节点上所有的节点
+        //当前绑定节点上所有的泛型
         List<? extends TypeParameterElement> typeParameters =
                 binding.bindingTypeElement().get().getTypeParameters();
         return typeParameters.stream().map(TypeVariableName::get).collect(toImmutableList());
@@ -236,7 +236,7 @@ public class SourceFiles {
      * Returns the generated factory or members injector name for a binding.
      * <p>
      * 1.如果绑定BindingType是PROVISION或PRODUCTION
-     * (1)如果BindingKind是ASSISTED_INJECTION、INJECTION、PROVISION、PRODUCTION，那么返回bindingElement + "Factory"
+     * (1)如果BindingKind是ASSISTED_INJECTION、INJECTION、PROVISION、PRODUCTION，那么返回bindingElement + "_Factory"
      * (2)如果BindingKind是ASSISTED_FACTORY,那么返回bindingElement + "_Impl"
      * 2.如果绑定BindingType是MEMBERS_INJECTION,返回membersInjectedType + "_MembersInjector"
      */

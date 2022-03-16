@@ -30,7 +30,9 @@ import static dagger.internal.codegen.javapoet.CodeBlocks.toParametersCodeBlock;
 import static dagger.internal.codegen.langmodel.Accessibility.isTypeAccessibleFrom;
 import static javax.lang.model.util.ElementFilter.methodsIn;
 
-/** A binding expression for multibound sets. */
+/**
+ * A binding expression for multibound sets.
+ */
 final class SetRequestRepresentation extends SimpleInvocationRequestRepresentation {
     private final ProvisionBinding binding;
     private final BindingGraph graph;
@@ -58,6 +60,7 @@ final class SetRequestRepresentation extends SimpleInvocationRequestRepresentati
         // TODO(ronshapiro): We should also make an ImmutableSet version of SetFactory
         boolean isImmutableSetAvailable = isImmutableSetAvailable();
         // TODO(ronshapiro, gak): Use Sets.immutableEnumSet() if it's available?
+        //表示存在ImmutableSet && 绑定对象的依赖的key的contributionType类型是ContributionType.SET
         if (isImmutableSetAvailable && binding.dependencies().stream().allMatch(this::isSingleValue)) {
             return Expression.create(
                     immutableSetType(),
@@ -73,11 +76,12 @@ final class SetRequestRepresentation extends SimpleInvocationRequestRepresentati
                                             .collect(toParametersCodeBlock()))
                             .build());
         }
+
+        //以上条件不满足，根据绑定对象依赖个数
         switch (binding.dependencies().size()) {
-            case 0:
+            case 0: //使用Collections.emptySet()
                 return collectionsStaticFactoryInvocation(requestingClass, CodeBlock.of("emptySet()"));
-            case 1:
-            {
+            case 1: {
                 DependencyRequest dependency = getOnlyElement(binding.dependencies());
                 CodeBlock contributionExpression = getContributionExpression(dependency, requestingClass);
                 if (isSingleValue(dependency)) {
@@ -118,11 +122,13 @@ final class SetRequestRepresentation extends SimpleInvocationRequestRepresentati
         }
     }
 
+    //ImmutableSet<x> x表示set<T>中的T
     private DeclaredType immutableSetType() {
         return types.getDeclaredType(
                 elements.getTypeElement(ImmutableSet.class), SetType.from(binding.key()).elementType());
     }
 
+    //去路由继续匹配
     private CodeBlock getContributionExpression(
             DependencyRequest dependency, ClassName requestingClass) {
         RequestRepresentation bindingExpression =
@@ -149,6 +155,7 @@ final class SetRequestRepresentation extends SimpleInvocationRequestRepresentati
                         .build());
     }
 
+    //表示当前requestingClass所在包对elementType类型可达，即可访问
     private CodeBlock maybeTypeParameter(ClassName requestingClass) {
         TypeMirror elementType = SetType.from(binding.key()).elementType();
         return isTypeAccessibleFrom(elementType, requestingClass.packageName())
@@ -156,12 +163,14 @@ final class SetRequestRepresentation extends SimpleInvocationRequestRepresentati
                 : CodeBlock.of("");
     }
 
+    //当前依赖的key匹配上bindingGraph的绑定对象的contributionType是SET类型
     private boolean isSingleValue(DependencyRequest dependency) {
         return graph.contributionBinding(dependency.key())
                 .contributionType()
                 .equals(ContributionType.SET);
     }
 
+    //使用了ImmutableSet.builderWithExpectedSize方法
     private boolean isImmutableSetBuilderWithExpectedSizeAvailable() {
         if (isImmutableSetAvailable()) {
             return methodsIn(elements.getTypeElement(ImmutableSet.class).getEnclosedElements())
@@ -171,7 +180,7 @@ final class SetRequestRepresentation extends SimpleInvocationRequestRepresentati
         return false;
     }
 
-    private boolean isImmutableSetAvailable() {
+    private boolean isImmutableSetAvailable() {//ImmutableSet存在于当前项目中
         return elements.getTypeElement(ImmutableSet.class) != null;
     }
 

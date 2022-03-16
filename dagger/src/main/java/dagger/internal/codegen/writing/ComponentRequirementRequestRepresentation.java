@@ -15,6 +15,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * A binding expression for instances bound with {@link dagger.BindsInstance} and instances of
  * {@linkplain dagger.Component#dependencies() component} and {@linkplain
  * dagger.producers.ProductionComponent#dependencies() production component dependencies}.
+ * <p>
+ * Component#dependencies()或ProductionComponent#dependencies()或BindsInstance修饰的(方法或方法)参数
  */
 final class ComponentRequirementRequestRepresentation
         extends SimpleInvocationRequestRepresentation {

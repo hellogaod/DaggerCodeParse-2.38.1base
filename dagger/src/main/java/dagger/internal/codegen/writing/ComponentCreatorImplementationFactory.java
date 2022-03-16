@@ -78,6 +78,8 @@ final class ComponentCreatorImplementationFactory {
 
     /**
      * Returns a new creator implementation for the given component, if necessary.
+     * <p>
+     * component内部类creator节点生成Creator类
      */
     Optional<ComponentCreatorImplementation> create() {
         if (!componentImplementation.componentDescriptor().hasCreator()) {
@@ -118,8 +120,10 @@ final class ComponentCreatorImplementationFactory {
             addConstructor();
             //4.变量
             this.fields = addFields();
+
             //5.SetterMethod方法-Builder模式下的setterMethod方法在Creator类中创建新的方法
             addSetterMethods();
+
             //6. FactoryMethod方法-Factory模式下的factoryMethod方法 或 Builder模式下的build方法
             addFactoryMethod();
 
@@ -171,10 +175,17 @@ final class ComponentCreatorImplementationFactory {
          * component.
          */
         private Set<ComponentRequirement> neededUserSettableRequirements() {
+            //userSettableRequirements()：factory模式下方法参数生成的ComponentRequirement或builder模式下的setterMethod方法参数生成的ComponentRequirement
+            //componentConstructorRequirements:需要实例的类型
+            //  ①当前componentAnnotation#dependencies；
+            //  ②当前component需要实例化的module节点；
+            //  ③当前creator使用@BindsInstance修饰的方法或方法参数
+            //  ④component返回类型是subcomponent的节点；
             return Sets.intersection(
                     userSettableRequirements().keySet(), componentConstructorRequirements());
         }
 
+        //creator生成类设置修饰符
         private void setModifiers() {
             visibility().ifPresent(classBuilder::addModifiers);
             classBuilder.addModifiers(STATIC, FINAL);
@@ -194,14 +205,20 @@ final class ComponentCreatorImplementationFactory {
          * Adds a constructor for the creator type, if needed.
          */
         protected void addConstructor() {
+            //构造函数使用private修饰
             MethodSpec.Builder constructor = MethodSpec.constructorBuilder().addModifiers(PRIVATE);
+
             componentImplementation
                     .creatorComponentFields()
                     .forEach(
                             field -> {
+                                //变量名
                                 fieldNames.claim(field.name);
+                                //类添加变量
                                 classBuilder.addField(field);
+                                //构造函数添加参数
                                 constructor.addParameter(field.type, field.name);
+                                //构造函数添加代码块
                                 constructor.addStatement("this.$1N = $1N", field);
                             });
             classBuilder.addMethod(constructor.build());
@@ -212,7 +229,16 @@ final class ComponentCreatorImplementationFactory {
             ImmutableMap<ComponentRequirement, FieldSpec> result =
                     Maps.toMap(
                             //neededUserSettableRequirements：
+                            //  userSettableRequirements()：factory模式下方法参数生成的ComponentRequirement或builder模式下的setterMethod方法参数生成的ComponentRequirement
+                            //  componentConstructorRequirements:需要实例的类型
+                            //   ①当前componentAnnotation#dependencies；
+                            //   ②当前component需要实例化的module节点；
+                            //   ③当前creator使用@BindsInstance修饰的方法或方法参数
+                            //   ④component返回类型是subcomponent的节点；
+
                             //setterMethods:BuilderForCreatorDescriptor实现类中表示creator是Builder情况下setterMethod方法参数生成的ComponentRequirement对象
+
+                            //intersection获取的是两个方法的交集：所以获取的是:creator是Builder情况下setterMethod方法参数生成的ComponentRequirement对象
                             Sets.intersection(neededUserSettableRequirements(), setterMethods()),
                             requirement ->
                                     FieldSpec.builder(
@@ -237,10 +263,12 @@ final class ComponentCreatorImplementationFactory {
          */
         protected abstract MethodSpec.Builder setterMethodBuilder(ComponentRequirement requirement);
 
+        //处理Builder模式下的setterMethod方法
         private Optional<MethodSpec> createSetterMethod(
                 ComponentRequirement requirement, RequirementStatus status) {
             switch (status) {
                 case NEEDED:
+                    //正常继承setterMethod方法即可
                     return Optional.of(normalSetterMethod(requirement));
                 case UNNEEDED:
                     // TODO(bcorso): Don't generate noop setters for any unneeded requirements.
@@ -260,6 +288,7 @@ final class ComponentCreatorImplementationFactory {
             throw new AssertionError();
         }
 
+        //正常的setterMethod方法生成新的继承方法
         private MethodSpec normalSetterMethod(ComponentRequirement requirement) {
             MethodSpec.Builder method = setterMethodBuilder(requirement);
             ParameterSpec parameter = parameter(method.build());
@@ -284,6 +313,7 @@ final class ComponentCreatorImplementationFactory {
             return maybeReturnThis(method);
         }
 
+        //没有找到当前方法
         private MethodSpec repeatedModuleSetterMethod(ComponentRequirement requirement) {
             return setterMethodBuilder(requirement)
                     .addStatement(
@@ -295,7 +325,7 @@ final class ComponentCreatorImplementationFactory {
                     .build();
         }
 
-        private ParameterSpec parameter(MethodSpec method) {
+        private ParameterSpec parameter(MethodSpec method) {//参数
             return getOnlyElement(method.parameters);
         }
 
@@ -310,32 +340,44 @@ final class ComponentCreatorImplementationFactory {
             classBuilder.addMethod(factoryMethod());
         }
 
-        MethodSpec factoryMethod() {
+        MethodSpec factoryMethod() { //factoryMethod方法创建或buildMethod方法的创建
+
+            //方法继承
             MethodSpec.Builder factoryMethod = factoryMethodBuilder();
+
+            //方法修饰符和返回类型
             factoryMethod
                     .returns(ClassName.get(componentDescriptor().typeElement()))
                     .addModifiers(PUBLIC);
 
+            //方法参数
             ImmutableMap<ComponentRequirement, String> factoryMethodParameters =
                     factoryMethodParameters();
+
+            //factory模式下方法参数生成的ComponentRequirement或builder模式下的setterMethod方法参数生成的ComponentRequirement
             userSettableRequirements()
                     .keySet()
                     .forEach(
                             requirement -> {
+                                //Builder模式下的build方法
                                 if (fields.containsKey(requirement)) {
                                     FieldSpec field = fields.get(requirement);
                                     addNullHandlingForField(requirement, field, factoryMethod);
-                                } else if (factoryMethodParameters.containsKey(requirement)) {
+                                }
+                                //Factory模式下factoryMethod方法
+                                else if (factoryMethodParameters.containsKey(requirement)) {
                                     String parameterName = factoryMethodParameters.get(requirement);
                                     addNullHandlingForParameter(requirement, parameterName, factoryMethod);
                                 }
                             });
+
             factoryMethod.addStatement(
                     "return new $T($L)",
                     componentImplementation.name(),
                     componentConstructorArgs(factoryMethodParameters));
             return factoryMethod.build();
         }
+
 
         private void addNullHandlingForField(
                 ComponentRequirement requirement, FieldSpec field, MethodSpec.Builder factoryMethod) {
@@ -377,9 +419,12 @@ final class ComponentCreatorImplementationFactory {
 
         private CodeBlock componentConstructorArgs(
                 ImmutableMap<ComponentRequirement, String> factoryMethodParameters) {
+            //合并
             return Stream.concat(
+                    //1.currentComponent及其父级currentComponent生成的变量，但是要排除当前currentComponent生成的变量
                     componentImplementation.creatorComponentFields().stream()
                             .map(field -> CodeBlock.of("$N", field)),
+                    //2. factoryMethod方法中的参数或setterMethod方法中的参数
                     componentConstructorRequirements().stream()
                             .map(
                                     requirement -> {
@@ -424,12 +469,13 @@ final class ComponentCreatorImplementationFactory {
 
         @Override
         protected void setSupertype() {
+            //继承creator节点
             addSupertype(super.classBuilder, creatorDescriptor.typeElement());
         }
 
         @Override
         protected void addConstructor() {
-            //做了筛选：表示去除掉当前component节点
+            //如果componentImplementation用于生成creator的变量不为空
             if (!componentImplementation.creatorComponentFields().isEmpty()) {
                 super.addConstructor();
             }
@@ -442,7 +488,7 @@ final class ComponentCreatorImplementationFactory {
         }
 
         @Override
-        protected ImmutableMap<ComponentRequirement, String> factoryMethodParameters() {
+        protected ImmutableMap<ComponentRequirement, String> factoryMethodParameters() {//factoryMethod方法参数
             return ImmutableMap.copyOf(
                     Maps.transformValues(
                             creatorDescriptor.factoryParameters(),
@@ -454,15 +500,17 @@ final class ComponentCreatorImplementationFactory {
         }
 
         @Override
-        protected MethodSpec.Builder factoryMethodBuilder() {
+        protected MethodSpec.Builder factoryMethodBuilder() {//factoryMethod方法继承
             return MethodSpec.overriding(creatorDescriptor.factoryMethod(), creatorType(), types);
         }
 
         private RequirementStatus requirementStatus(ComponentRequirement requirement) {
+            //当前creator被@BindsInstance修饰的参数表示的节点，既不存在于当前component中，也不存在与整个BindingGraph有向图中。
             if (isRepeatedModule(requirement)) {
                 return RequirementStatus.UNSETTABLE_REPEATED_MODULE;
             }
 
+            //如果存在于component中，表示needed；否则表示unnneeded
             return componentConstructorRequirements().contains(requirement)
                     ? RequirementStatus.NEEDED
                     : RequirementStatus.UNNEEDED;
@@ -486,6 +534,7 @@ final class ComponentCreatorImplementationFactory {
 
         @Override
         protected MethodSpec.Builder setterMethodBuilder(ComponentRequirement requirement) {
+            //creator节点中Builder模式下的setterMethod方法生成新的方法
             ExecutableElement supertypeMethod = creatorDescriptor.setterMethods().get(requirement);
             MethodSpec.Builder method = MethodSpec.overriding(supertypeMethod, creatorType(), types);
             if (!supertypeMethod.getReturnType().getKind().equals(TypeKind.VOID)) {
@@ -514,6 +563,7 @@ final class ComponentCreatorImplementationFactory {
 
         @Override
         protected Optional<Modifier> visibility() {
+            //如果creator所在的component节点使用了public，那么当前creator使用public；否则什么都不需要
             return componentImplementation
                     .componentDescriptor()
                     .typeElement()

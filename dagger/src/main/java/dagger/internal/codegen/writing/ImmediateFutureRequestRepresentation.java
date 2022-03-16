@@ -17,7 +17,7 @@ import dagger.spi.model.RequestKind;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static dagger.internal.codegen.binding.BindingRequest.bindingRequest;
-
+//当前被key匹配上的是ProvisionBinding对象，并且Binding绑定对象bindtype属性是FUTURE
 final class ImmediateFutureRequestRepresentation extends RequestRepresentation {
     private final Key key;
     private final ComponentRequestRepresentations componentRequestRepresentations;

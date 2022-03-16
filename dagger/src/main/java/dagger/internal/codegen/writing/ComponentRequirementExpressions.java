@@ -96,8 +96,8 @@ public final class ComponentRequirementExpressions {
      */
     private ComponentRequirementExpression createExpression(ComponentRequirement requirement) {
         if (componentShard.componentDescriptor().hasCreator()
-                || (graph.factoryMethod().isPresent()
-                && graph.factoryMethodParameters().containsKey(requirement))) {
+                || (graph.factoryMethod().isPresent() && graph.factoryMethodParameters().containsKey(requirement))
+        ) {
             return new ComponentParameterField(requirement);
         } else if (requirement.kind().isModule()) {
             return new InstantiableModuleField(requirement);

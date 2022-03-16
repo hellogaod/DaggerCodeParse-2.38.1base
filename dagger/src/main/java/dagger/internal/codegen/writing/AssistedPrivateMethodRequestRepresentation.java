@@ -25,7 +25,11 @@ import static dagger.internal.codegen.javapoet.CodeBlocks.parameterNames;
 import static dagger.internal.codegen.writing.ComponentImplementation.MethodSpecKind.PRIVATE_METHOD;
 import static javax.lang.model.element.Modifier.PRIVATE;
 
-/** A binding expression that wraps private method call for assisted fatory creation. */
+/**
+ * A binding expression that wraps private method call for assisted fatory creation.
+ * <p>
+ * binding对象是ProvisionBinding并且它的kind属性是ASSISTED_INJECTION
+ */
 final class AssistedPrivateMethodRequestRepresentation extends MethodRequestRepresentation {
     private final ComponentImplementation.ShardImplementation shardImplementation;
     private final ContributionBinding binding;

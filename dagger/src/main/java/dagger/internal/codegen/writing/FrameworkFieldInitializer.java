@@ -83,7 +83,11 @@ class FrameworkFieldInitializer implements FrameworkInstanceSupplier {
      */
     @Override
     public final MemberSelect memberSelect() {
+
+        //初始化变量:
+        //e.g.this.assistedFactoryRequestRepresentationProvider = AssistedFactoryRequestRepresentation_Factory.create(componentRequestRepresentationsProvider, processorComponent.daggerTypesProvider, processorComponent.daggerElementsProvider)
         initializeField();
+        //返回LocalField对象
         return MemberSelect.localField(shardImplementation, checkNotNull(fieldSpec).name);
     }
 
@@ -96,7 +100,10 @@ class FrameworkFieldInitializer implements FrameworkInstanceSupplier {
                 // Change our state in case we are recursively invoked via initializeRequestRepresentation
                 fieldInitializationState = InitializationState.INITIALIZING;
                 CodeBlock.Builder codeBuilder = CodeBlock.builder();
+                //e.g.返回的是AssistedFactoryRequestRepresentation_Factory.create(componentRequestRepresentationsProvider, processorComponent.daggerTypesProvider, processorComponent.daggerElementsProvider)
                 CodeBlock fieldInitialization = frameworkInstanceCreationExpression.creationExpression();
+
+                //e.g.this.assistedFactoryRequestRepresentationProvider = fieldInitialization代码块
                 CodeBlock initCode = CodeBlock.of("this.$N = $L;", getOrCreateField(), fieldInitialization);
 
                 if (fieldInitializationState == InitializationState.DELEGATED) {
@@ -126,6 +133,10 @@ class FrameworkFieldInitializer implements FrameworkInstanceSupplier {
     /**
      * Adds a field representing the resolved bindings, optionally forcing it to use a particular
      * binding type (instead of the type the resolved bindings would typically use).
+     * <p>
+     * 创建变量并且获取,e.g.
+     *
+     * @SuppressWarnings("rawtypes") private AssistedFactoryRequestRepresentation_Factory assistedFactoryRequestRepresentationProvider;
      */
     private FieldSpec getOrCreateField() {
         if (fieldSpec != null) {

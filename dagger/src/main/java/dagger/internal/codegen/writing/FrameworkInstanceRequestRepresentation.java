@@ -40,6 +40,8 @@ abstract class FrameworkInstanceRequestRepresentation extends RequestRepresentat
      */
     @Override
     Expression getDependencyExpression(ClassName requestingClass) {
+
+        //获取LocalField对象
         MemberSelect memberSelect = frameworkInstanceSupplier.memberSelect();
         TypeMirror expressionType =
                 isTypeAccessibleFrom(binding.contributedType(), requestingClass.packageName())

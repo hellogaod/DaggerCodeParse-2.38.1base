@@ -56,12 +56,14 @@ final class PrivateMethodRequestRepresentation extends MethodRequestRepresentati
     }
 
     @Override
-    protected TypeMirror returnType() {//方法所在父类类型
+    protected TypeMirror returnType() {
         if (request.isRequestKind(RequestKind.INSTANCE)
                 && binding.contributedPrimitiveType().isPresent()) {
+            //方法的返回类型
             return binding.contributedPrimitiveType().get();
         }
 
+        //绑定对象的key中的type类型 e.g.AssistedFactoryRequestRepresentation.Factory
         TypeMirror requestedType = request.requestedType(binding.contributedType(), types);
         return types.accessibleType(requestedType, shardImplementation.name());
     }

@@ -9,7 +9,11 @@ import dagger.assisted.AssistedInject;
 import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.javapoet.Expression;
 
-/** A binding expression for the instance of the component itself, i.e. {@code this}. */
+/**
+ * A binding expression for the instance of the component itself, i.e. {@code this}.
+ * <p>
+ * component节点生成的ProvisionBinding对象
+ */
 final class ComponentInstanceRequestRepresentation extends SimpleInvocationRequestRepresentation {
     private final ComponentImplementation componentImplementation;
     private final ContributionBinding binding;
@@ -24,6 +28,7 @@ final class ComponentInstanceRequestRepresentation extends SimpleInvocationReque
 
     @Override
     Expression getDependencyExpression(ClassName requestingClass) {
+        //type：当前绑定key的type类型，代码块：this
         return Expression.create(
                 binding.key().type().java(),
                 componentImplementation.name().equals(requestingClass)

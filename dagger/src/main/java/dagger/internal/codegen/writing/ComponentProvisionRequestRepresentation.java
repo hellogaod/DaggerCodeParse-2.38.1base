@@ -15,6 +15,8 @@ import dagger.internal.codegen.javapoet.Expression;
 
 /**
  * A binding expression for component provision methods.
+ *
+ *component节点不是production的 componentAnnotation#dependencies里面的类的无参返回类型不是void的方法 生成的ProvisionBinding
  */
 final class ComponentProvisionRequestRepresentation extends SimpleInvocationRequestRepresentation {
     private final ProvisionBinding binding;

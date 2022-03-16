@@ -79,6 +79,7 @@ final class MembersInjectionMethods {
 
                         injectMethodExpressions, key, k -> injectMethodExpression(binding, requestingClass));
 
+        //如果是3500个绑定对象范围内表示的就是一个ShardImplementation对象
         ComponentImplementation.ShardImplementation shardImplementation = componentImplementation.shardImplementation(binding);
 
         //e.g.Expression.codeBlock表示新生成的Component类的重写inject方法的代码片段： injectComponentProcessor(processor);
@@ -100,6 +101,7 @@ final class MembersInjectionMethods {
 
         TypeMirror keyType = binding.key().type().java();
 
+        //判断当前keytype是否可以被新生成的component类所在包访问，不可以则使用Object替代
         TypeMirror membersInjectedType =
                 isTypeAccessibleFrom(keyType, shardImplementation.name().packageName())
                         ? keyType
@@ -129,10 +131,11 @@ final class MembersInjectionMethods {
         methodBuilder.addCode(
 
                 InjectionMethods.InjectionSiteMethod.invokeAll(
-                        injectionSites(binding),
-                        shardImplementation.name(),
-                        instance,
-                        membersInjectedType,
+                        injectionSites(binding),//表示绑定对象中使用Inject修饰的普通方法或变量
+                        shardImplementation.name(),//当前生成的component类
+                        instance,//赋值对象
+                        membersInjectedType,//赋值对象的参数类型
+                        //函数式
                         request ->
                                 //这才是延伸到后面需要的方法的重头戏
                                 //e.g.

@@ -79,32 +79,6 @@ public final class ComponentRequestRepresentations {
      */
     public Expression getDependencyExpression(BindingRequest request, ClassName requestingClass) {
 
-        //核心纽带
-        //1.InjectBindingRegistry作为type生成的key钥匙匹配上InjectBindingRegistryModule的injectBindingRegistry方法
-        //DelegateRequestRepresentation对象，参数InjectBindingRegistryImpl作为type的key和RequestKind.INSTANCE 往下执行
-
-        //1.1 InjectBindingRegistryImpl作为type的key匹配上InjectBindingRegistryImpl使用Inject修饰的构造函数
-        //DerivedFromFrameworkInstanceRequestRepresentation对象,参数InjectBindingRegistryImpl作为type的key和RequestKind.PROVIDER，FrameworkType.PROVIDER往下执行
-        //FrameworkFieldInitializer.FrameworkInstanceCreationExpression对象作为FrameworkFieldInitializer对象参数
-        //InjectionOrProvisionProviderCreationExpression对象
-        //FrameworkFieldInitializer对象ProviderInstanceRequestRepresentation对象参数
-
-        //1.1.1 InjectBindingRegistryImpl构造函数的参数作为key去匹配
-
-        //2.SourceFileGenerator<ProvisionBinding> factoryGenerator作为type生成的key钥匙匹配上SourceFileGeneratorsModule的factoryGenerator方法
-        //PrivateMethodRequestRepresentation对象
-
-        //3.SourceFileGenerator<MembersInjectionBinding> 作为type生成的key钥匙匹配上 SourceFileGeneratorsModule的SourceFileGenerator<MembersInjectionBinding> membersInjectorGenerator方法；
-        //PrivateMethodRequestRepresentation对象
-
-        //4.ImmutableList<XProcessingStep> processingSteps匹配上ProcessingStepsModule的processingSteps方法；
-        //PrivateMethodRequestRepresentation对象
-
-        //5.ValidationBindingGraphPlugins validationBindingGraphPlugins匹配上ValidationBindingGraphPlugins使用Inject修饰的构造函数
-        //PrivateMethodRequestRepresentation对象
-
-        //6.Set<ClearableCache> clearableCaches作为key钥匙匹配上ProcessingEnvironmentModule的daggerElementAsClearableCache方法
-        //PrivateMethodRequestRepresentation对象
         return getRequestRepresentation(request).getDependencyExpression(requestingClass);
     }
 
@@ -190,30 +164,21 @@ public final class ComponentRequestRepresentations {
 
     /**
      * Returns the implementation of a component method.
+     * <p>
+     * componentMethod存在依赖的方法
      */
     public MethodSpec getComponentMethod(ComponentDescriptor.ComponentMethodDescriptor componentMethod) {
         checkArgument(componentMethod.dependencyRequest().isPresent());
 
         BindingRequest request = bindingRequest(componentMethod.dependencyRequest().get());
 
-        //e.g.在生成的Component类中生成继承component节点的void inject(ComponentProcessor processor)方法
+        //生成的方法继承自componentMethod方法
         return MethodSpec.overriding(
                 componentMethod.methodElement(),
                 MoreTypes.asDeclared(graph.componentTypeElement().asType()),
                 types)
                 .addCode(
-                        //调用MembersInjectionRequestRepresentation.getComponentMethodImplementation:（以及ComponentProcessor_MembersInjector类）
-
-                        //重写的void inject(ComponentProcessor processor)方法如下代码片段：
-                        //ComponentProcessor_MembersInjector.injectInjectBindingRegistry(instance, (InjectBindingRegistry) injectBindingRegistryImplProvider.get());
-                        //ComponentProcessor_MembersInjector.injectFactoryGenerator(instance, sourceFileGeneratorOfProvisionBinding());
-                        //ComponentProcessor_MembersInjector.injectMembersInjectorGenerator(instance, sourceFileGeneratorOfMembersInjectionBinding());
-                        //ComponentProcessor_MembersInjector.injectProcessingSteps(instance, immutableListOfXProcessingStep());
-                        //ComponentProcessor_MembersInjector.injectValidationBindingGraphPlugins(instance, validationBindingGraphPlugins());
-                        //ComponentProcessor_MembersInjector.injectExternalBindingGraphPlugins(instance, externalBindingGraphPlugins());
-                        //ComponentProcessor_MembersInjector.injectClearableCaches(instance, setOfClearableCache());
-
-                        //request:componentMethod依赖生成
+                        //生成的新方法会关联到一系列的额外的代码
                         getRequestRepresentation(request)
 
                                 .getComponentMethodImplementation(componentMethod, componentImplementation))
@@ -222,12 +187,17 @@ public final class ComponentRequestRepresentations {
 
     /**
      * Returns the {@link RequestRepresentation} for the given {@link BindingRequest}.
+     *
+     *
      */
     RequestRepresentation getRequestRepresentation(BindingRequest request) {
+
+        //表示之前处理过的会存储起来，没必要去再次找一遍
         if (expressions.containsKey(request)) {
             return expressions.get(request);
         }
 
+        //MEMBERS_INJECTION:表示需要注入依赖，目前有且仅有一种情况：componentMethod方法返回类型是void或和唯一的参数类型一致，生成的ComponentMethodDescriptor对象的依赖的kind属性；
         Optional<Binding> localBinding =
                 request.isRequestKind(RequestKind.MEMBERS_INJECTION)
                         ? graph.localMembersInjectionBinding(request.key())
@@ -241,14 +211,17 @@ public final class ComponentRequestRepresentations {
             return expression;
         }
 
+        //如果在当前处理的currentComponent及其关联的绑定对象中没有找到，那么去父级component及其关联的绑定对象中找
         checkArgument(parent.isPresent(), "no expression found for %s", request);
         return parent.get().getRequestRepresentation(request);
     }
 
     BindingRepresentation getBindingRepresentation(Binding binding) {
+        //同样的表示处理过的直接返回，非常具有借鉴意义
         if (representations.containsKey(binding)) {
             return representations.get(binding);
         }
+
         BindingRepresentation representation =
                 legacyBindingRepresentationFactory.create(isFastInit(), binding, switchingProviders);
         representations.put(binding, representation);

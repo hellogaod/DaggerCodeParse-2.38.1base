@@ -67,6 +67,7 @@ final class MapRequestRepresentation extends SimpleInvocationRequestRepresentati
         // TODO(ronshapiro): We should also make an ImmutableMap version of MapFactory
         boolean isImmutableMapAvailable = isImmutableMapAvailable();
         // TODO(ronshapiro, gak): Use Maps.immutableEnumMap() if it's available?
+        //当前项目存在ImmutableMap && 绑定对象的依赖少于等于5个
         if (isImmutableMapAvailable && dependencies.size() <= MAX_IMMUTABLE_MAP_OF_KEY_VALUE_PAIRS) {
             return Expression.create(
                     immutableMapType(),
@@ -82,6 +83,7 @@ final class MapRequestRepresentation extends SimpleInvocationRequestRepresentati
                                             .collect(toParametersCodeBlock()))
                             .build());
         }
+
         switch (dependencies.size()) {
             case 0:
                 return collectionsStaticFactoryInvocation(requestingClass, CodeBlock.of("emptyMap()"));
@@ -112,6 +114,7 @@ final class MapRequestRepresentation extends SimpleInvocationRequestRepresentati
         }
     }
 
+    //Map<K,V>换成ImmutableMap<K,V>
     private DeclaredType immutableMapType() {
         MapType mapType = MapType.from(binding.key());
         return types.getDeclaredType(
@@ -138,6 +141,7 @@ final class MapRequestRepresentation extends SimpleInvocationRequestRepresentati
                         .build());
     }
 
+    //根据访问权限决定使用哪种类型代码
     private CodeBlock maybeTypeParameters(ClassName requestingClass) {
         TypeMirror bindingKeyType = binding.key().type().java();
         MapType mapType = MapType.from(binding.key());
@@ -146,6 +150,7 @@ final class MapRequestRepresentation extends SimpleInvocationRequestRepresentati
                 : CodeBlock.of("");
     }
 
+    //ImmutableMap.builderWithExpectedSize方法
     private boolean isImmutableMapBuilderWithExpectedSizeAvailable() {
         if (isImmutableMapAvailable()) {
             return methodsIn(elements.getTypeElement(ImmutableMap.class).getEnclosedElements())
@@ -155,6 +160,7 @@ final class MapRequestRepresentation extends SimpleInvocationRequestRepresentati
         return false;
     }
 
+    //当前项目存在ImmutableMap
     private boolean isImmutableMapAvailable() {
         return elements.getTypeElement(ImmutableMap.class) != null;
     }

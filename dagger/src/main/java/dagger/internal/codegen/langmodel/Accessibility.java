@@ -60,7 +60,7 @@ public final class Accessibility {
     /**
      * Returns true if the given type can be referenced from code in the given package.
      * <p>
-     * 当前的type里面的代码是否可被给定的包引用
+     * 当前的type里面的代码是否在packageName包下
      */
     public static boolean isTypeAccessibleFrom(TypeMirror type, String packageName) {
         return type.accept(new TypeAccessibilityVisitor(packageName), null);
@@ -70,7 +70,7 @@ public final class Accessibility {
         return type.accept(new TypeAccessibilityVisitor(packageName), null);
     }
 
-    //类型判断
+    //当前的type里面的代码是否在packageName包下
     private static final class TypeAccessibilityVisitor extends SimpleTypeVisitor6<Boolean, Void> {
         final Optional<String> packageName;
 

@@ -157,7 +157,6 @@ final class InjectionMethods {
 
             MethodSpec methodSpec = create(binding, compilerOptions, metadataUtil);
 
-            //返回 methodSpec方法名(arguments参数以逗号分隔) 代码块
             return invokeMethod(methodSpec, arguments.build(), enclosingClass, requestingClass);
         }
 
@@ -168,6 +167,7 @@ final class InjectionMethods {
         static boolean requiresInjectionMethod(
                 ProvisionBinding binding, CompilerOptions compilerOptions, ClassName requestingClass) {
             ExecutableElement method = MoreElements.asExecutable(binding.bindingElement().get());
+            //绑定对象存在Inject修饰的变量或普通方法
             return !binding.injectionSites().isEmpty()
                     || binding.shouldCheckForNull(compilerOptions)
                     || !isElementAccessibleFrom(method, requestingClass.packageName())
@@ -203,9 +203,8 @@ final class InjectionMethods {
                     arguments.add(CodeBlock.of("$L", uniqueAssistedParameterName.apply(parameter)));
 
                 } else if (dependencyRequestMap.containsKey(parameter)) {
-
-                    //2.除了Assisted修饰的参数，其他参数需要加入架构类型生成新的代码块加入到arguments，例如Provider<T>
                     DependencyRequest request = dependencyRequestMap.get(parameter);
+                    //2.除了Assisted修饰的参数生成的代码块处理
                     arguments.add(
                             injectionMethodArgument(request, dependencyUsage.apply(request), requestingClass));
                 } else {
@@ -533,7 +532,10 @@ final class InjectionMethods {
 
         //public static修饰当前方法
         MethodSpec.Builder builder =
-                methodBuilder(methodName).addModifiers(PUBLIC, STATIC).varargs(method.isVarArgs());
+                methodBuilder(methodName).
+                        addModifiers(PUBLIC, STATIC).
+                        //varargs:设置最后一个参数是否为可变参数
+                        varargs(method.isVarArgs());
 
         TypeElement enclosingType = asType(method.getEnclosingElement());
         boolean isMethodInKotlinObject = metadataUtil.isObjectClass(enclosingType);
@@ -615,6 +617,7 @@ final class InjectionMethods {
         return builder.addStatement("$L.$L = $L", instance, field.getSimpleName(), argument).build();
     }
 
+    //返回 methodSpec方法名(arguments参数以逗号分隔) 代码块
     private static CodeBlock invokeMethod(
             MethodSpec methodSpec,
             ImmutableList<CodeBlock> parameters,

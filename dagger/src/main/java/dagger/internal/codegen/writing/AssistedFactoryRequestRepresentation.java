@@ -32,6 +32,8 @@ import static dagger.internal.codegen.binding.AssistedInjectionAnnotations.assis
 /**
  * A {@link dagger.internal.codegen.writing.RequestRepresentation} for {@link
  * dagger.assisted.AssistedFactory} methods.
+ *
+ * AssistedFactory修饰的节点中的有且仅有的唯一方法
  */
 final class AssistedFactoryRequestRepresentation extends SimpleInvocationRequestRepresentation {
     private final ProvisionBinding binding;
@@ -56,6 +58,7 @@ final class AssistedFactoryRequestRepresentation extends SimpleInvocationRequest
     Expression getDependencyExpression(ClassName requestingClass) {
         // An assisted factory binding should have a single request for an assisted injection type.
         DependencyRequest assistedInjectionRequest = getOnlyElement(binding.provisionDependencies());
+        //@AssistedFactory修饰的节点的唯一方法的返回类型是使用@AssistedInject修饰的构造函数
         Expression assistedInjectionExpression =
                 ((AssistedPrivateMethodRequestRepresentation)
                         componentRequestRepresentations.getRequestRepresentation(

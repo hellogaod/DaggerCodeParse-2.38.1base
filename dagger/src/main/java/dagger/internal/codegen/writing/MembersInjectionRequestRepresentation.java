@@ -19,6 +19,8 @@ import static javax.lang.model.type.TypeKind.VOID;
 /**
  * A binding expression for members injection component methods. See {@link
  * MembersInjectionMethods}.
+ * <p>
+ * componentMethod返回类型不是subcomponent，并且有且仅有一个参数，该方法生成的依赖RequestKind类型匹配到的MembersInjectionBinding对象
  */
 final class MembersInjectionRequestRepresentation extends RequestRepresentation {
 
@@ -48,17 +50,21 @@ final class MembersInjectionRequestRepresentation extends RequestRepresentation 
     @Override
     protected CodeBlock getComponentMethodImplementation(
             ComponentDescriptor.ComponentMethodDescriptor componentMethod, ComponentImplementation component) {
+        //componentMethod方法和方法参数
         ExecutableElement methodElement = componentMethod.methodElement();
         ParameterSpec parameter = ParameterSpec.get(getOnlyElement(methodElement.getParameters()));
 
+        //如果当前被匹配的MembersInjectionBinding对象不存在Inject修饰的变量或普通方法
         if (binding.injectionSites().isEmpty()) {
             return methodElement.getReturnType().getKind().equals(VOID)
-                    ? CodeBlock.of("")
+                    ? CodeBlock.of("")//表示什么都不做
+                    //如果componentMethod的唯一参数里面没有Inject修饰的变量或普通方法，那么代码块使用：return + 该componentMethod方法唯一参数
                     : CodeBlock.of("return $N;", parameter);
         } else {
+            //当前生成的Component类名
             ClassName requestingClass = component.name();
             return methodElement.getReturnType().getKind().equals(VOID)
-                    //返回的代码片段是：injectComponentProcessor(processor)
+                    //e.g.返回的代码片段是：injectComponentProcessor(processor)
                     ? CodeBlock.of("$L;", membersInjectionInvocation(parameter, requestingClass).codeBlock())
                     : CodeBlock.of(
                     "return $L;", membersInjectionInvocation(parameter, requestingClass).codeBlock());

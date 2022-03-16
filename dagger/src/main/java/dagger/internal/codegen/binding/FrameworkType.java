@@ -41,6 +41,7 @@ public enum FrameworkType {
         public CodeBlock to(RequestKind requestKind, CodeBlock from) {
             switch (requestKind) {
                 case INSTANCE:
+
                     return CodeBlock.of("$L.get()", from);
 
                 case LAZY:
@@ -73,6 +74,7 @@ public enum FrameworkType {
 
             switch (requestKind) {
                 case INSTANCE:
+
                     return Expression.create(types.unwrapTypeOrObject(from.type()), codeBlock);
 
                 case PROVIDER:

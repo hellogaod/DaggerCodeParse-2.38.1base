@@ -80,6 +80,7 @@ public abstract class ProvisionBinding extends ContributionBinding {
             ImmutableSet.of(PROVISION, COMPONENT_PROVISION);
 
     public boolean shouldCheckForNull(CompilerOptions compilerOptions) {
+        //component节点或@Provides修饰的bindingMethod方法生成的ProvisionBinding对象
         return KINDS_TO_CHECK_FOR_NULL.contains(kind())
                 && !contributedPrimitiveType().isPresent()
                 && !nullableType().isPresent()

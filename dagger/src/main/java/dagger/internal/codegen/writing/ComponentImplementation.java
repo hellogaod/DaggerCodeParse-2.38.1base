@@ -118,6 +118,8 @@ public final class ComponentImplementation {
 
         /**
          * A framework field for type T, e.g. {@code Provider<T>}.
+         * <p>
+         * 变量
          */
         FRAMEWORK_FIELD,
 
@@ -145,6 +147,8 @@ public final class ComponentImplementation {
 
         /**
          * A private method that wraps dependency expressions.
+         * <p>
+         * 生成的方法类型
          */
         PRIVATE_METHOD,
 
@@ -155,6 +159,8 @@ public final class ComponentImplementation {
 
         /**
          * An implementation of a component interface method.
+         * <p>
+         * 表示component节点的入口方法
          */
         COMPONENT_METHOD,
 
@@ -186,6 +192,8 @@ public final class ComponentImplementation {
 
         /**
          * A class for the component creator (only used by the root component.)
+         * <p>
+         * 表示creator类型的类
          */
         COMPONENT_CREATOR,
 
@@ -201,14 +209,14 @@ public final class ComponentImplementation {
 
         /**
          * A class for the subcomponent or subcomponent builder.
+         * <p>
+         * subcomponent生成的Component类的类型
          */
         SUBCOMPONENT
     }
 
     /**
      * Returns the {@link ShardImplementation} for each binding in this graph.
-     * <p>
-     * 在图形中的每个绑定生成一个ShardImplementation对象
      *
      * <p>Each shard contains approximately {@link CompilerOptions#keysPerComponentShard()} bindings.
      *
@@ -223,6 +231,9 @@ public final class ComponentImplementation {
         ImmutableList<ImmutableList<Binding>> partitions = bindingPartitions(graph, compilerOptions);
 
         ImmutableMap.Builder<Binding, ShardImplementation> builder = ImmutableMap.builder();
+
+        //如果当前BindingGraph有向图的BindingNode节点在3500以内，那么使用一个component类初始化即可；
+        // 否则多余的BindingNode节点以每3500为一个单位在重新创建的componentShared+ i类中完成实例化
         for (int i = 0; i < partitions.size(); i++) {
             //表示binding绑定对象基于的component节点
             ShardImplementation shard = i == 0 ? componentShard : componentShard.createShard("Shard" + i);
@@ -282,12 +293,18 @@ public final class ComponentImplementation {
      */
     private static final int STATEMENTS_PER_METHOD = 100;
 
+    //当前正在处理的component需要一个ShardImplementation对象处理
     private final ShardImplementation componentShard;
+    //当前component中的绑定对象如果超过了3500个，那么以3500为一个单位（最后那个不满3500作为一个单位），每个单位使用一个item
     private final ImmutableMap<Binding, ShardImplementation> shardsByBinding;
+    //当前在处理的component收集到的变量
     private final Map<ShardImplementation, FieldSpec> shardFieldsByImplementation = new HashMap<>();
+
     private final List<CodeBlock> shardInitializations = new ArrayList<>();
     private final List<CodeBlock> shardCancellations = new ArrayList<>();
+    //当前在处理的currentcomponent所在的父级parentcomponent节点
     private final Optional<ComponentImplementation> parent;
+    //用于生成子componentImplementation
     private final ChildComponentImplementationFactory childComponentImplementationFactory;
     private final Provider<ComponentRequestRepresentations> bindingExpressionsProvider;
     private final Provider<ComponentCreatorImplementationFactory>
@@ -326,14 +343,18 @@ public final class ComponentImplementation {
         this.metadataUtil = metadataUtil;
 
         // The first group of keys belong to the component itself. We call this the componentShard.
+        //如果当前component是root，那么使用rootName，否则使用rootName.currentCompoonent + "Impl"
+        //初始化了当前component生成的构造函数的参数
         this.componentShard = new ShardImplementation(componentNames.get(graph.componentPath()));
 
         // Claim the method names for all local and inherited methods on the component type.
+        //确保生成的component类中不存在重复的方法名
         elements
                 .getLocalAndInheritedMethods(graph.componentTypeElement())
                 .forEach(method -> componentShard.componentMethodNames.claim(method.getSimpleName()));
 
         // Create the shards for this component, indexed by binding.
+        //当前BindingGraph有向图的BindingNode节点在3500以内，那么使用一个component类初始化即可;否则重新创建处理多余的BindingNode节点（以3500为一个单位）
         this.shardsByBinding = createShardsByBinding(componentShard, graph, compilerOptions);
 
         // Create and claim the fields for this and all ancestor components stored as fields.
@@ -382,10 +403,12 @@ public final class ComponentImplementation {
 
     /**
      * Returns the fields for all components in the component path except the current component.
+     * <p>
+     * currentComponent及其父级currentComponent生成的变量，但是要排除当前currentComponent生成的变量：
      */
     public ImmutableList<FieldSpec> creatorComponentFields() {
         return componentFieldsByImplementation.entrySet().stream()
-                .filter(entry -> !this.equals(entry.getKey()))
+                .filter(entry -> !this.equals(entry.getKey()))//排除当前currentComponent生成的变量：
                 .map(Map.Entry::getValue)
                 .collect(toImmutableList());
     }
@@ -398,6 +421,7 @@ public final class ComponentImplementation {
                 componentImplementation.componentShard != null,
                 "The component shard must be set before computing the component fields.");
 
+        //收集当前componentImplementation对象以及当前对象的父级对象，直到父级componentImplementation对象不存在。
         ImmutableList.Builder<ComponentImplementation> builder = ImmutableList.builder();
         for (ComponentImplementation curr = componentImplementation;
              curr != null;
@@ -408,6 +432,9 @@ public final class ComponentImplementation {
         // }
         // For better readability when adding these fields/parameters to generated code, we collect the
         // component implementations in reverse order so that parents appear before children.
+        // Map<K,V>,K:正在处理的componentImplementation对象；
+        // V：正在处理的componentImplementation对象的有向图中的当前currentComponent节点生成的一个private和final修饰的变量，
+        // 并且当前currentComponent节点根据是否内部类生成不同的变量名存在于正在处理的componentImplementation对象的componentShard的componentFieldNames集合中。
         return builder.build().reverse().stream()
                 .collect(
                         toImmutableMap(
@@ -501,27 +528,34 @@ public final class ComponentImplementation {
         private final ClassName name;
         private final UniqueNameSet componentFieldNames = new UniqueNameSet();
         private final UniqueNameSet componentMethodNames = new UniqueNameSet();
+        //生成的initialize方法中实现的代码块收集
         private final List<CodeBlock> initializations = new ArrayList<>();
         private final Map<Key, CodeBlock> cancellations = new LinkedHashMap<>();
+        //收集Assisted修饰的参数
         private final Map<VariableElement, String> uniqueAssistedName = new LinkedHashMap<>();
+        //存放给新生成的Component类的构造函数添加的代码块
         private final List<CodeBlock> componentRequirementInitializations = new ArrayList<>();
         private final ImmutableMap<ComponentRequirement, ParameterSpec> constructorParameters;
         private final ListMultimap<FieldSpecKind, FieldSpec> fieldSpecsMap =
                 MultimapBuilder.enumKeys(FieldSpecKind.class).arrayListValues().build();
+        //存储当前component的入口方法
         private final ListMultimap<MethodSpecKind, MethodSpec> methodSpecsMap =
                 MultimapBuilder.enumKeys(MethodSpecKind.class).arrayListValues().build();
+        //存放在ShardImplementation当前实现的内部类
         private final ListMultimap<TypeSpecKind, TypeSpec> typeSpecsMap =
                 MultimapBuilder.enumKeys(TypeSpecKind.class).arrayListValues().build();
         private final List<Supplier<TypeSpec>> typeSuppliers = new ArrayList<>();
 
         private ShardImplementation(ClassName name) {
             this.name = name;
+            //如果当前component是production类型，那么onProducerFutureCancelled方法名表示已经被用过了
             if (graph.componentDescriptor().isProduction()) {
                 claimMethodName(CANCELLATION_LISTENER_METHOD_NAME);
             }
 
             // Build the map of constructor parameters for this shard and claim the field names to prevent
             // collisions between the constructor parameters and fields.
+            //生成的Component类的构造函数的参数来源，并且参数名使用原先的参数名 + "Param"
             constructorParameters =
                     constructorRequirements(graph).stream()
                             .collect(
@@ -549,6 +583,8 @@ public final class ComponentImplementation {
         /**
          * Returns {@code true} if this shard represents the component implementation rather than a
          * separate {@code Shard} class.
+         * <p>
+         * 在component中的绑定个数超出3500个会用到，否则条件一直成立
          */
         public boolean isComponentShard() {
             return this == componentShard;
@@ -736,7 +772,7 @@ public final class ComponentImplementation {
             //1.component节点生成Component类
             TypeSpec.Builder builder = classBuilder(name);
 
-            if (isComponentShard()) {
+            if (isComponentShard()) {//在component中的绑定个数超出3500个判断为false，否则条件一直成立
 
                 //2. 当前生成的Component类继承component节点
                 TypeSpecs.addSupertype(builder, graph.componentTypeElement());
@@ -744,7 +780,8 @@ public final class ComponentImplementation {
                 //3.生成Creator内部类
                 addCreator();
 
-                //4.在Component类中生成一个新建Creator内部类的factory方法
+                //4.（1）如果当前不存在parent，在Component类中生成一个新建Creator内部类的factory方法；
+                // （2）存在父级parent，那么如果当前currentComponent存在返回类型是subcomponent的方法，对该方法和方法参数生成一个方法；
                 addFactoryMethods();
 
                 //5.component节点中的入口方法：返回类型不是subcomponent节点的方法，非static、非private
@@ -753,7 +790,8 @@ public final class ComponentImplementation {
                 //6.当前component节点中的subcomponent节点实现代码
                 addChildComponents();
 
-                //7.处理binding绑定带来的碎片-当然了比较笼统，因为还不知道具体的任务
+                //7.可以理解为如果当前currentComponent的绑定超出了3500，那么以3500为一个单位，对每个单位生成对应的类
+                //但是不能理解第一个已经处理过了为什么这里还要重新处理。
                 addShards();
             }
 
@@ -812,7 +850,8 @@ public final class ComponentImplementation {
         }
 
         private void addFactoryMethods() {
-            if (parent.isPresent()) {
+            if (parent.isPresent()) {//当前处理的是子component
+                //当前子component是否存在返回类型是subcomponent的方法，如果存在生成一个createSubcomponentFactoryMethod方法
                 graph.factoryMethod().ifPresent(this::createSubcomponentFactoryMethod);
             } else {
                 createRootComponentFactoryMethod();
@@ -834,12 +873,14 @@ public final class ComponentImplementation {
             boolean noArgFactoryMethod;
             Optional<ComponentCreatorDescriptor> creatorDescriptor =
                     graph.componentDescriptor().creatorDescriptor();
-            //creator节点中方法的返回类型是父级componentAll节点
+            //当前currentcomponent节点的内部creator节点
             if (creatorDescriptor.isPresent()) {
                 ComponentCreatorDescriptor descriptor = creatorDescriptor.get();
                 creatorKind = descriptor.kind();
                 creatorType = ClassName.get(descriptor.typeElement());
+                //creator节点中的factoryMethod方法或buildMethod方法 名称
                 factoryMethodName = descriptor.factoryMethod().getSimpleName().toString();
+                //如果无参表示buildMethod方法；否则表示factoryMethod方法
                 noArgFactoryMethod = descriptor.factoryParameters().isEmpty();
             } else {
                 creatorKind = BUILDER;
@@ -848,6 +889,7 @@ public final class ComponentImplementation {
                 noArgFactoryMethod = true;
             }
 
+            //校验component中方法名
             validateMethodNameDoesNotOverrideGeneratedCreator(creatorKind.methodName());
 
             MethodSpec creatorFactoryMethod =
@@ -859,7 +901,7 @@ public final class ComponentImplementation {
 
             addMethod(MethodSpecKind.BUILDER_METHOD, creatorFactoryMethod);
 
-            //如果factoryMethod无参 &&
+            //如果是buildMethod方法 && component节点生成的有向图可以自己完成构建，不需要依赖外部实例化
             if (noArgFactoryMethod && canInstantiateAllRequirements()) {
                 validateMethodNameDoesNotOverrideGeneratedCreator("create");
                 addMethod(
@@ -872,11 +914,16 @@ public final class ComponentImplementation {
             }
         }
 
+        //表示component不允许出现非static修饰的无参的使用build或factory作为方法名的方法
         private void validateMethodNameDoesNotOverrideGeneratedCreator(String creatorName) {
             // Check if there is any client added method has the same signature as generated creatorName.
+            //当前BindingGraph中的currentComponent节点中所有的方法
             MoreElements.getAllMethods(graph.componentTypeElement(), types, elements).stream()
+                    //筛选方法名是creatorName
                     .filter(method -> method.getSimpleName().contentEquals(creatorName))
+                    //筛选方法无参
                     .filter(method -> method.getParameters().isEmpty())
+                    //筛选方法不是使用static修饰
                     .filter(method -> !method.getModifiers().contains(Modifier.STATIC))
                     .forEach(
                             (ExecutableElement method) ->
@@ -889,13 +936,17 @@ public final class ComponentImplementation {
 
         /**
          * {@code true} if all of the graph's required dependencies can be automatically constructed
+         * <p>
+         * BindingGraph有向图的依赖项 都可以自动构建
          */
         private boolean canInstantiateAllRequirements() {
+            //!(graph.componentRequirements() 满足dependency -> dependency.requiresAPassedInstance(elements, metadataUtil))
             return !Iterables.any(
                     graph.componentRequirements(),
                     dependency -> dependency.requiresAPassedInstance(elements, metadataUtil));
         }
 
+        //返回类型是subcomponent，对该方法的module参数实例化
         private void createSubcomponentFactoryMethod(ExecutableElement factoryMethod) {
             checkState(parent.isPresent());
             Collection<ParameterSpec> params =
@@ -919,9 +970,11 @@ public final class ComponentImplementation {
             parent.get().getComponentShard().addMethod(COMPONENT_METHOD, method.build());
         }
 
+        //核心部件
         private void addInterfaceMethods() {
             // Each component method may have been declared by several supertypes. We want to implement
             // only one method for each distinct signature.
+            //有向图中当前正在处理的currentComponent节点
             DeclaredType componentType = asDeclared(graph.componentTypeElement().asType());
 
             //确保入口方法不重复
@@ -948,7 +1001,10 @@ public final class ComponentImplementation {
 
         private void addShards() {
             // Generate all shards and add them to this component implementation.
+            //当前CurrentComponent节点中的绑定个数超出3500才会是多个，否则只有一个
             for (ShardImplementation shard : ImmutableSet.copyOf(shardsByBinding.values())) {
+
+                //当前currentComponent节点收集到的变量处理
                 if (shardFieldsByImplementation.containsKey(shard)) {
                     addField(FieldSpecKind.COMPONENT_SHARD_FIELD, shardFieldsByImplementation.get(shard));
                     TypeSpec shardTypeSpec = shard.generate();
@@ -1140,14 +1196,16 @@ public final class ComponentImplementation {
         }
     }
 
+    //表示生成的component类构造函数的参数来源
     private static ImmutableList<ComponentRequirement> constructorRequirements(BindingGraph graph) {
 
+        //当前有向图的ComponentNodeImpl节点表示的component节点是否存在creator节点。
         if (graph.componentDescriptor().hasCreator()) {
 
-            //（1）componentAnnotation#dependencies；
-            //（2）当前graph图中需要被实例化的module；
+            //（1）componentAnnotation#dependencies生成的ComponentRequirement集合；
+            //（2）当前graph图中需要被实例化的module生成的ComponentRequirement集合；
             //（3）使用@BindsInstance修饰的方法或方法参数生成的ComponentRequirement集合；
-            //（4）component中的返回类型是ChildComponent类型，那么对当前方法的参数（参数肯定是module节点）生成Module类型的ComponentRequirement对象；
+            //（4）component中的返回类型是ChildComponent类型存在，那么对当前方法的参数（参数肯定是module节点）生成Module类型的ComponentRequirement对象；
             return graph.componentRequirements().asList();
         } else if (graph.factoryMethod().isPresent()) {
 

@@ -365,21 +365,27 @@ public abstract class BindingGraph {
      * </ul>
      *
      *需要实例的类型：
-     * （1）componentAnnotation#dependencies；
-     * （2）当前graph图中需要被实例化的module；
+     * （1）componentAnnotation#dependencies生成的ComponentRequirement集合；
+     * （2）当前graph图中需要被实例化的module生成的ComponentRequirement集合；
      * （3）使用@BindsInstance修饰的方法或方法参数生成的ComponentRequirement集合；
-     * （4）component中的返回类型是ChildComponent类型的方法，那么对当前方法的参数（参数肯定是module节点）生成Module类型的ComponentRequirement对象；
+     * （4）component中的返回类型是ChildComponent类型的方法存在，那么对当前方法的参数（参数肯定是module节点）生成Module类型的ComponentRequirement对象；
      */
     @Memoized
     public ImmutableSet<ComponentRequirement> componentRequirements() {
 
+
+        //收集当前BindingGraph有向图上所有的Binding绑定对象module节点属性，该module节点存在于当前component关联的module中
         ImmutableSet<TypeElement> requiredModules =
+                //当前有向图及其子有效图
                 stream(Traverser.forTree(BindingGraph::subgraphs).depthFirstPostOrder(this))
+                        //以上有效图中BindingNode节点中所有的ContributionBinding类型的绑定对象如果能找到所在module节点
                         .flatMap(graph -> graph.bindingModules.stream())
+                        //找到的module节点存在于当前ComponentNode节点表示的component关联的所有module节点（排除component节点关联的subcomponent中关联的module节点）
                         .filter(ownedModuleTypes()::contains)
                         .collect(toImmutableSet());
 
         ImmutableSet.Builder<ComponentRequirement> requirements = ImmutableSet.builder();
+
         componentDescriptor().requirements().stream()
                 .filter(
                         requirement ->

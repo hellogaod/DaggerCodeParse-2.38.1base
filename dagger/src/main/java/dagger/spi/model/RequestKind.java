@@ -22,11 +22,21 @@ import static com.google.common.base.CaseFormat.UPPER_UNDERSCORE;
 public enum RequestKind {
     /**
      * A default request for an instance. E.g.: {@code FooType}
+     * <p>
+     * （1）使用T；没有使用任何类型对象包裹；
+     * （2）@Provides或@Produces或@Binds修饰的bindingMethod使用@IntoSet或@ElementIntoSet生成的依赖的kind属性；
      */
     INSTANCE,
 
     /**
      * A request for a {@link Provider}. E.g.: {@code Provider<FooType>}
+     * <p>
+     * （1）Provider< T>类型对象；
+     * （2）Produces修饰的bindingMethod方法生成的ProductionBinding对象里面会
+     * 生成两个属性：monitorRequest 和executorRequest，这两个依赖的kind类型都是
+     * PROVIDER类型；
+     * （3）如果key的type使用了AssistedFactory修饰，该type生成ProvisionBinding对象的
+     * provisionDependencies依赖的kind属性；
      */
     PROVIDER,
 
@@ -44,7 +54,8 @@ public enum RequestKind {
      * A request for a members injection. E.g. {@code void injectMembers(FooType);}. Can only be
      * requested by component interfaces.
      * <p>
-     * 作为成员注入该component：component类中的方法有且仅有一个参数,返回类型是void或参数类型和方法返回类型必须一致
+     * componentMethod返回类型不是subcomponent，
+     * 并且有且仅有一个参数，该方法生成的依赖RequestKind类型；
      */
     MEMBERS_INJECTION,
 
@@ -61,6 +72,9 @@ public enum RequestKind {
     /**
      * A request for a {@link com.google.common.util.concurrent.ListenableFuture}. E.g.: {@code
      * ListenableFuture<FooType>}. These can only be requested by component interfaces.
+     * <p>
+     * 使用ListenableFuture< T>，只有在componentMethod方法所在
+     * component节点是production类型才可以使用该ListenableFuture< T>返回类型
      */
     FUTURE,
     ;

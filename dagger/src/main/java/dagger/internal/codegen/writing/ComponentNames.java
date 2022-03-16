@@ -33,6 +33,8 @@ import static java.lang.String.format;
 /**
  * Holds the unique simple names for all components, keyed by their {@link ComponentPath} and {@link
  * Key} of the subcomponent builder.
+ *
+ * 用于生成component和creator类名
  */
 public class ComponentNames {
 
@@ -69,6 +71,7 @@ public class ComponentNames {
     ClassName get(ComponentPath componentPath) {
         return componentPath.atRoot()
                 ? rootName
+                //父节点生成的名称.currentComponent + "Impl"
                 : rootName.nestedClass(namesByPath.get(componentPath) + "Impl");
     }
 
@@ -102,6 +105,7 @@ public class ComponentNames {
     }
 
     //graph有向图上，K：ComponentNodeImpl节点中的ComponentPath属性，V：component节点如果存在creator，表示当前creator的name
+    //Factory模式下使用Factory作为类名，Builder模式下使用Builder作为类名
     private static ImmutableMap<ComponentPath, String> creatorNamesByPath(
             ImmutableMap<ComponentPath, String> namesByPath, BindingGraph graph) {
         ImmutableMap.Builder<ComponentPath, String> builder = ImmutableMap.builder();
@@ -120,13 +124,14 @@ public class ComponentNames {
                                 ComponentCreatorDescriptor creatorDescriptor =
                                         componentDescriptor.creatorDescriptor().get();
                                 String componentName = namesByPath.get(componentPath);
+                                //component类名 + creator类名 拼接
                                 builder.put(componentPath, componentName + creatorDescriptor.kind().typeName());
                             }
                         });
         return builder.build();
     }
 
-    //graph图形中的ComponentNodeImpl节点的ComponentPath属性和component节点名称
+    //graph图形中的ComponentNodeImpl节点的ComponentPath属性和它当前正在解析的component节点名称
     private static ImmutableMap<ComponentPath, String> namesByPath(BindingGraph graph) {
         Map<ComponentPath, String> componentPathsBySimpleName = new LinkedHashMap<>();
         Multimaps.index(graph.componentDescriptorsByPath().keySet(), ComponentNames::simpleName)

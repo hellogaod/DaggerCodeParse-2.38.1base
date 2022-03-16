@@ -34,6 +34,8 @@ import static dagger.internal.codegen.writing.InjectionMethods.ProvisionMethod.r
 /**
  * A binding expression that invokes methods or constructors directly (without attempting to scope)
  * {@link dagger.spi.model.RequestKind#INSTANCE} requests.
+ * <p>
+ * Inject或AssistedInject修饰的构造函数以及Provides修饰的bindingMethod方法
  */
 final class SimpleMethodRequestRepresentation extends SimpleInvocationRequestRepresentation {
     private final CompilerOptions compilerOptions;
@@ -78,7 +80,7 @@ final class SimpleMethodRequestRepresentation extends SimpleInvocationRequestRep
     }
 
     private Expression invokeMethod(ClassName requestingClass) {
-        // TODO(dpb): align this with the contents of InlineMethods.create
+         // TODO(dpb): align this with the contents of InlineMethods.create
         CodeBlock arguments =
                 makeParametersCodeBlock(
                         InjectionMethods.ProvisionMethod.invokeArguments(
@@ -86,6 +88,7 @@ final class SimpleMethodRequestRepresentation extends SimpleInvocationRequestRep
                                 request -> dependencyArgument(request, requestingClass).codeBlock(),
                                 shardImplementation::getUniqueFieldNameForAssistedParam,
                                 requestingClass));
+
         ExecutableElement method = asExecutable(provisionBinding.bindingElement().get());
         CodeBlock invocation;
         switch (method.getKind()) {
@@ -124,6 +127,9 @@ final class SimpleMethodRequestRepresentation extends SimpleInvocationRequestRep
     }
 
     private Expression invokeInjectionMethod(ClassName requestingClass) {
+        //e.g.生成代码块：SourceFileGeneratorsModule_FactoryGeneratorFactory.factoryGenerator(factoryGenerator(), bindCompilerOptionsProvider.get())
+        //e.g.生成代码块：
+        // FactoryGenerator_Factory.newInstance(xFiler(), sourceVersion(), daggerTypesProvider.get(), daggerElementsProvider.get(), bindCompilerOptionsProvider.get(), kotlinMetadataUtil());
         return injectMembers(
                 InjectionMethods.ProvisionMethod.invoke(
                         provisionBinding,
