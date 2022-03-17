@@ -94,7 +94,8 @@ final class AndroidMapKeyValidator implements Step {
             return;
         }
 
-        //如果该方法使用了Scope注解修饰的注解修饰，该方法必须使用@SuppressWarnings注解修饰，并且该@SuppressWarning注解包含dagger.android.ScopedInjectorFactory值（意思就是最好别使用Scope修饰的注解修饰）；
+        //如果该方法使用了Scope注解修饰的注解修饰，该方法必须使用@SuppressWarnings注解修饰，并且该@SuppressWarning注解包含dagger.android.ScopedInjectorFactory值
+        // （意思就是最好别使用Scope修饰的注解修饰）；
         if (!getAnnotatedAnnotations(method, Scope.class).isEmpty()) {
             SuppressWarnings suppressedWarnings = method.getAnnotation(SuppressWarnings.class);
             if (suppressedWarnings == null
