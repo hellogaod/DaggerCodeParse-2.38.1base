@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.inject.Inject;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 
 import androidx.room.compiler.processing.XElement;
@@ -20,6 +21,7 @@ import androidx.room.compiler.processing.XTypeElement;
 import androidx.room.compiler.processing.compat.XConverters;
 import dagger.internal.codegen.base.SourceFileGenerator;
 import dagger.internal.codegen.binding.BindingFactory;
+import dagger.internal.codegen.binding.ContributionBinding;
 import dagger.internal.codegen.binding.DelegateDeclaration;
 import dagger.internal.codegen.binding.ProductionBinding;
 import dagger.internal.codegen.binding.ProvisionBinding;
@@ -32,6 +34,8 @@ import dagger.internal.codegen.writing.InaccessibleMapKeyProxyGenerator;
 import dagger.internal.codegen.writing.ModuleGenerator;
 
 import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSet;
+import static dagger.internal.codegen.langmodel.DaggerElements.isAnnotationPresent;
+import static javax.lang.model.util.ElementFilter.methodsIn;
 
 /**
  * A {@link BasicAnnotationProcessor.ProcessingStep} that validates module classes and generates factories for binding
@@ -113,9 +117,35 @@ final class ModuleProcessingStep extends TypeCheckingProcessingStep<XTypeElement
         ValidationReport report = moduleValidator.validate(module);
         report.printMessagesTo(messager);
         if (report.isClean()) {
-            //校验缺少图形验证校验
+            generateForMethodsIn(module);
+            if (metadataUtil.hasEnclosedCompanionObject(module)) {
+                generateForMethodsIn(metadataUtil.getEnclosedCompanionObject(module));
+            }
         }
         processedModuleElements.add(module);
     }
 
+    private void generateForMethodsIn(TypeElement module) {
+        for (ExecutableElement method : methodsIn(module.getEnclosedElements())) {
+            if (isAnnotationPresent(method, TypeNames.PROVIDES)) {
+                generate(factoryGenerator, bindingFactory.providesMethodBinding(method, module));
+            } else if (isAnnotationPresent(method, TypeNames.PRODUCES)) {
+                generate(producerFactoryGenerator, bindingFactory.producesMethodBinding(method, module));
+            } else if (isAnnotationPresent(method, TypeNames.BINDS)) {
+                inaccessibleMapKeyProxyGenerator.generate(bindsMethodBinding(module, method), messager);
+            }
+        }
+        moduleConstructorProxyGenerator.generate(module, messager);
+    }
+
+    private <B extends ContributionBinding> void generate(
+            SourceFileGenerator<B> generator, B binding) {
+        generator.generate(binding, messager);
+        inaccessibleMapKeyProxyGenerator.generate(binding, messager);
+    }
+
+    private ContributionBinding bindsMethodBinding(TypeElement module, ExecutableElement method) {
+        return bindingFactory.unresolvedDelegateBinding(
+                delegateDeclarationFactory.create(method, module));
+    }
 }
