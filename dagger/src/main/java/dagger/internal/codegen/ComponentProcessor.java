@@ -132,13 +132,14 @@ public class ComponentProcessor extends JavacBasicAnnotationProcessor {
     @Singleton
     @Component(
             modules = {
-                    InjectBindingRegistryModule.class,
-                    SourceFileGeneratorsModule.class,
-                    ProcessingStepsModule.class,
-                    ProcessingEnvironmentModule.class,
-                    ComponentGeneratorModule.class,
-                    BindingMethodValidatorsModule.class,
-                    BindingGraphValidationModule.class
+                    BindingGraphValidationModule.class,//类中就一个providePlugins方法，bindingGraph绑定图形校验
+                    BindingMethodValidatorsModule.class,//indexValidators方法是为了收集下面五个方法的参数类型，这五种类型分别表示对@Provides、@Produces、@Binds、@Multibinds、@BindsOptionalOf修饰的方法的校验
+                    ComponentGeneratorModule.class,//当前ProcessorComponent接口生成代码
+                    InjectBindingRegistryModule.class,//提供injectBindingRegistry方法，该方法提供InjectBindingRegistry的实例对象InjectBindingRegistryImpl
+                    ProcessingEnvironmentModule.class,//提供一些常用的或者XProcessingEnv实例携带的实例化对象
+                    ProcessingRoundCacheModule.class,//为clearableCaches集合（@Inject修饰的变量）item；
+                    ProcessingStepsModule.class,//核心，处理不同注解；给processingSteps集合（@Inject修饰的变量）提供item
+                    SourceFileGeneratorsModule.class,//提供代码生成器，用于最终Dagger注解的代码生成
             }
     )
     interface ProcessorComponent {

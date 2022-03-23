@@ -825,7 +825,16 @@ final class DaggerComponentProcessor_ProcessorComponent implements ComponentProc
 
 
     private Set<ClearableCache> setOfClearableCache() {
-        return ImmutableSet.<ClearableCache>of(daggerElementsProvider.get());
+        return ImmutableSet.<ClearableCache>of(
+                daggerElementsProvider.get(),
+                anyBindingMethodValidatorProvider.get(),
+                injectValidatorProvider.get(),
+                factoryProvider5.get(),
+                bindingGraphFactoryProvider.get(),
+                componentValidatorProvider.get(),
+                componentCreatorValidatorProvider.get(),
+                kotlinMetadataFactoryProvider.get()
+        );
     }
 
     @SuppressWarnings("unchecked")
