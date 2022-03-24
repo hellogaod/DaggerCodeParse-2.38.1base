@@ -68,7 +68,7 @@ public enum BindingKind {
     /**
      * A binding for a {@link dagger.MembersInjector} of a type.
      * <p>
-     * componentMethod返回类型或componentMethod唯一参数类型关联的Inject修饰的变量或方法 的方法参数是MembersInjector类型生成的绑定；
+     * 依赖类型是MembersInjector<T>
      */
     MEMBERS_INJECTOR,
 
