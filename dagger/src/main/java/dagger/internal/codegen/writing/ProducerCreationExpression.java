@@ -13,6 +13,8 @@ import static dagger.internal.codegen.binding.SourceFiles.generatedClassNameForB
 /**
  * A {@link dagger.producers.Producer} creation expression for a {@link
  * dagger.producers.Produces @Produces}-annotated module method.
+ * <p>
+ * Produces修饰的方法生成的ProductionBinding对象
  */
 // TODO(dpb): Resolve with InjectionOrProvisionProviderCreationExpression.
 final class ProducerCreationExpression implements FrameworkFieldInitializer.FrameworkInstanceCreationExpression {

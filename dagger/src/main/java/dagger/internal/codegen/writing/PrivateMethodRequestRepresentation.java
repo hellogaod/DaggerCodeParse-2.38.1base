@@ -23,6 +23,8 @@ import static javax.lang.model.element.Modifier.PRIVATE;
  * A binding expression that wraps the dependency expressions in a private, no-arg method.
  *
  * <p>Dependents of this binding expression will just call the no-arg private method.
+ * <p>
+ * BindingRequest的RequestKind是INSTANCE，被key匹配ProvisionBinding对象存在依赖（@Inject构造函数存在参数，@Provides修饰的bindingMethod方法存在参数），会携带RequestRepresentation对象
  */
 final class PrivateMethodRequestRepresentation extends MethodRequestRepresentation {
     private final ComponentImplementation.ShardImplementation shardImplementation;

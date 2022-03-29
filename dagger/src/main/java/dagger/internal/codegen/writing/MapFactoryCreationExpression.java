@@ -21,7 +21,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static dagger.internal.codegen.binding.MapKeys.getMapKeyExpression;
 import static dagger.internal.codegen.binding.SourceFiles.mapFactoryClassName;
 
-/** A factory creation expression for a multibound map. */
+/**
+ * A factory creation expression for a multibound map.
+ * 如果key及其变异匹配上
+ * （1）@Provides或@Produces或@Binds修饰的bindingMethod，该bindingMethod还是
+ * 用了@IntoMap或@IntoSet或@ElementsIntoSet、
+ * （2）@Multibinds修饰的bindingMethod方法。
+ * 该key的type是Map<K,V>，那么生成的Binding对象的BindingKind属性；
+ */
 final class MapFactoryCreationExpression extends MultibindingFactoryCreationExpression {
 
     private final ComponentImplementation componentImplementation;

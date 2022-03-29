@@ -28,7 +28,8 @@ import static javax.lang.model.element.Modifier.PRIVATE;
 /**
  * A binding expression that wraps private method call for assisted fatory creation.
  * <p>
- * binding对象是ProvisionBinding并且它的kind属性是ASSISTED_INJECTION
+ * 当前被key匹配上的是@AssistedInject修饰构造函数生成的ProvisionBinding对象，并且当前key生成的BindingRequest的RequestKind是INSTANCE类型：
+ * - 生成的ProvisionBinding对象的key和RequestKind.INSTANCE生成BindingRequest，当前ProvisionBinding对象以及SimpleMethodRequestRepresentation对象作为参数
  */
 final class AssistedPrivateMethodRequestRepresentation extends MethodRequestRepresentation {
     private final ComponentImplementation.ShardImplementation shardImplementation;

@@ -25,6 +25,8 @@ import static javax.lang.model.element.Modifier.PUBLIC;
  * A {@link dagger.producers.Producer} creation expression for a production method on a production
  * component's {@linkplain dagger.producers.ProductionComponent#dependencies()} dependency} that
  * returns a {@link com.google.common.util.concurrent.ListenableFuture}.
+ *
+ * component节点是production的componentAnnotation#dependencies里面的节点的无参返回类型不是void的方法生成ProductionBinding对象
  */
 // TODO(dpb): Resolve with DependencyMethodProviderCreationExpression.
 final class DependencyMethodProducerCreationExpression

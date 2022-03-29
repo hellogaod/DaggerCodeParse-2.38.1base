@@ -27,8 +27,11 @@ import static dagger.spi.model.BindingKind.DELEGATE;
 
 /**
  * A {@link dagger.internal.codegen.writing.RequestRepresentation} for {@code @Binds} methods.
- *
- * @Binds修饰的bindingMethod方法
+ * <p>
+ * 1. 当前被key匹配上的是ProvisionBinding对象，并且该key生成的BindingRequest的RequestKind类型是PROVIDER，该ProvisionBinding对象是@Binds修饰的bindingMethod方法生成，并且该方法没有使用Scope注解（或Scope注解比当前ProvisionBinding对象的依赖匹配到的Binding对象强）：
+ * - 当前ProvisionBinding对象和RequestKind.PROVIDER作为参数；
+ * 2. 当前被key匹配上的是ProvisionBinding对象，并且该key生成的BindingRequest的RequestKind类型是INSTANCE，并且该ProvisionBinding对象是@Binds修饰的bindingMethod方法生成,该bindingMethod方法没有使用Scope注解（或Scope注解比当前ProvisionBinding对象的依赖匹配到的Binding对象强）：
+ * - 当前ProvisionBinding对象和RequestKind.INSTANCE作为参数；
  */
 final class DelegateRequestRepresentation extends RequestRepresentation {
 
