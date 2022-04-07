@@ -81,7 +81,7 @@ public final class ExternalBindingGraphPlugins {
                     diagnosticReporterFactory.reporter(
                             spiGraph, plugin.pluginName(), /* reportErrorsAsWarnings= */ false);
             DiagnosticReporter reporter = ExternalBindingGraphConverter.fromSpiModel(spiReporter);
-            plugin.visitGraph(graph, reporter);
+//            plugin.visitGraph(graph, reporter);
             if (spiReporter.reportedDiagnosticKinds().contains(ERROR)) {
                 isClean = false;
             }

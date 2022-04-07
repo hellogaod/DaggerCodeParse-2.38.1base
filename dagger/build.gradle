@@ -67,6 +67,9 @@ dependencies {
 
     implementation "androidx.room:room-compiler-processing:2.4.0-beta01"
 
+    // Saved state module for ViewModel
+    implementation "androidx.lifecycle:lifecycle-viewmodel-savedstate:2.4.0-alpha03"
+
 }
 
 configurations {//全局配置去重依赖

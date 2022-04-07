@@ -85,6 +85,8 @@ abstract class KotlinMetadata {
 
     /**
      * Returns true if any constructor of the defined a default parameter.
+     * <p>
+     * 所有构造函数都是用了默认参数返回true；
      */
     @Memoized
     boolean containsConstructorWithDefaultParam() {
