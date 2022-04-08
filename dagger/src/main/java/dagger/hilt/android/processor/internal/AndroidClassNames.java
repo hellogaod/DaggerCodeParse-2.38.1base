@@ -33,6 +33,12 @@ public final class AndroidClassNames {
     public static final ClassName ON_CONTEXT_AVAILABLE_LISTENER =
             get("androidx.activity.contextaware", "OnContextAvailableListener");
 
+    public static final ClassName ACTIVITY_RETAINED_COMPONENT =
+            get("dagger.hilt.android.components", "ActivityRetainedComponent");
+
+    public static final ClassName VIEW_MODEL_COMPONENT =
+            get("dagger.hilt.android.components", "ViewModelComponent");
+
     public static final ClassName NULLABLE_INTERNAL = get("android.annotation", "Nullable");
     public static final ClassName NULLABLE = get("androidx.annotation", "Nullable");
 
@@ -52,6 +58,7 @@ public final class AndroidClassNames {
     public static final ClassName INJECTED_BY_HILT =
             get("dagger.hilt.android.internal.migration", "InjectedByHilt");
 
+    public static final ClassName VIEW_MODEL = get("androidx.lifecycle", "ViewModel");
 
     public static final ClassName COMPONENT_SUPPLIER =
             get("dagger.hilt.android.internal.managers", "ComponentSupplier");
@@ -62,10 +69,17 @@ public final class AndroidClassNames {
     public static final ClassName DEFAULT_VIEW_MODEL_FACTORIES =
             get("dagger.hilt.android.internal.lifecycle", "DefaultViewModelFactories");
 
+    public static final ClassName HILT_VIEW_MODEL_MAP_QUALIFIER =
+            get("dagger.hilt.android.internal.lifecycle", "HiltViewModelMap");
+    public static final ClassName HILT_VIEW_MODEL_KEYS_QUALIFIER =
+            get("dagger.hilt.android.internal.lifecycle", "HiltViewModelMap", "KeySet");
+
 
     public static final ClassName APPLICATION_CONTEXT_MODULE =
             get("dagger.hilt.android.internal.modules", "ApplicationContextModule");
 
+    public static final ClassName HILT_VIEW_MODEL =
+            get("dagger.hilt.android.lifecycle", "HiltViewModel");
 
     public static final ClassName SINGLETON_COMPONENT =
             get("dagger.hilt.components", "SingletonComponent");

@@ -14,7 +14,7 @@ public final class ClassNames {
             get("dagger.hilt", "InstallIn");
     public static final ClassName INJECT =
             get("javax.inject", "Inject");
-
+    public static final ClassName ASSISTED_INJECT = get("dagger.assisted", "AssistedInject");
     public static final ClassName SCOPE =
             get("javax.inject", "Scope");
     public static final ClassName CONTEXT = get("android.content", "Context");
@@ -28,8 +28,19 @@ public final class ClassNames {
 
     public static final ClassName CONTEXTS = get("dagger.hilt.android.internal", "Contexts");
 
+    public static final ClassName PROVIDES =
+            get("dagger", "Provides");
+    public static final ClassName MODULE = get("dagger", "Module");
+
     public static final ClassName GENERATED_COMPONENT_MANAGER =
             get("dagger.hilt.internal", "GeneratedComponentManager");
+
+    public static final ClassName BINDS =
+            get("dagger", "Binds");
+
+    public static final ClassName INTO_MAP = get("dagger.multibindings", "IntoMap");
+    public static final ClassName INTO_SET = get("dagger.multibindings", "IntoSet");
+    public static final ClassName STRING_KEY = get("dagger.multibindings", "StringKey");
 
     public static final ClassName PRECONDITIONS = get("dagger.hilt.internal", "Preconditions");
     public static final ClassName OBJECT = get("java.lang", "Object");
