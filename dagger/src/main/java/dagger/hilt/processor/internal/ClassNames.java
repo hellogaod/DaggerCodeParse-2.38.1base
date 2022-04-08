@@ -5,11 +5,24 @@ import com.squareup.javapoet.ClassName;
 
 import static com.squareup.javapoet.ClassName.get;
 
-/** Holder for commonly used class names. */
+/**
+ * Holder for commonly used class names.
+ */
 public final class ClassNames {
 
     public static final ClassName INSTALL_IN =
             get("dagger.hilt", "InstallIn");
+
+    public static final ClassName SCOPE =
+            get("javax.inject", "Scope");
+    public static final ClassName CONTEXT = get("android.content", "Context");
+    public static final ClassName SINGLETON_COMPONENT =
+            get("dagger.hilt.components", "SingletonComponent");
+
+    public static final ClassName TEST_APPLICATION_COMPONENT_MANAGER =
+            get("dagger.hilt.android.internal.testing", "TestApplicationComponentManager");
+    public static final ClassName TEST_APPLICATION_COMPONENT_MANAGER_HOLDER =
+            get("dagger.hilt.android.internal.testing", "TestApplicationComponentManagerHolder");
 
     public static final ClassName CONTEXTS = get("dagger.hilt.android.internal", "Contexts");
 
@@ -31,5 +44,21 @@ public final class ClassNames {
     public static final ClassName GENERATED_COMPONENT_MANAGER_HOLDER =
             get("dagger.hilt.internal", "GeneratedComponentManagerHolder");
 
-    private ClassNames() {}
+    public static final ClassName ANDROID_BIND_VALUE =
+            get("dagger.hilt.android.testing", "BindValue");
+    public static final ClassName ANDROID_BIND_VALUE_INTO_SET =
+            get("dagger.hilt.android.testing", "BindValueIntoSet");
+    public static final ClassName ANDROID_BIND_ELEMENTS_INTO_SET =
+            get("dagger.hilt.android.testing", "BindElementsIntoSet");
+    public static final ClassName ANDROID_BIND_VALUE_INTO_MAP =
+            get("dagger.hilt.android.testing", "BindValueIntoMap");
+    public static final ClassName HILT_ANDROID_TEST =
+            get("dagger.hilt.android.testing", "HiltAndroidTest");
+
+    public static final ClassName APPLICATION_CONTEXT =
+            get("dagger.hilt.android.qualifiers", "ApplicationContext");
+
+
+    private ClassNames() {
+    }
 }
