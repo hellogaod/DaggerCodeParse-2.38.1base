@@ -12,6 +12,8 @@ public final class ClassNames {
 
     public static final ClassName INSTALL_IN =
             get("dagger.hilt", "InstallIn");
+    public static final ClassName INJECT =
+            get("javax.inject", "Inject");
 
     public static final ClassName SCOPE =
             get("javax.inject", "Scope");
@@ -58,7 +60,13 @@ public final class ClassNames {
     public static final ClassName APPLICATION_CONTEXT =
             get("dagger.hilt.android.qualifiers", "ApplicationContext");
 
+    public static final ClassName CUSTOM_TEST_APPLICATION =
+            get("dagger.hilt.android.testing", "CustomTestApplication");
 
+    public static final ClassName HILT_ANDROID_APP =
+            get("dagger.hilt.android", "HiltAndroidApp");
+
+    public static final ClassName APPLICATION = get("android.app", "Application");
     private ClassNames() {
     }
 }
