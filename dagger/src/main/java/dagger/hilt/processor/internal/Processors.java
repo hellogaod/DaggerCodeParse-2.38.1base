@@ -46,6 +46,7 @@ import javax.lang.model.type.ErrorType;
 import javax.lang.model.type.PrimitiveType;
 import javax.lang.model.type.TypeKind;
 import javax.lang.model.type.TypeMirror;
+import javax.lang.model.util.ElementFilter;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.SimpleAnnotationValueVisitor7;
 import javax.lang.model.util.SimpleTypeVisitor7;
@@ -54,9 +55,11 @@ import dagger.internal.codegen.extension.DaggerStreams;
 import dagger.internal.codegen.kotlin.KotlinMetadataUtil;
 
 import static com.google.auto.common.MoreElements.asPackage;
+import static com.google.auto.common.MoreElements.asType;
 import static com.google.auto.common.MoreElements.asVariable;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static dagger.internal.codegen.extension.DaggerCollectors.toOptional;
+import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static javax.lang.model.element.Modifier.STATIC;
 
@@ -70,6 +73,18 @@ public final class Processors {
     public static final String STATIC_INITIALIZER_NAME = "<clinit>";
 
     private static final String JAVA_CLASS = "java.lang.Class";
+
+    /**
+     * Returns true if the given element has an annotation that is an error kind.
+     */
+    public static boolean hasErrorTypeAnnotation(Element element) {
+        for (AnnotationMirror annotationMirror : element.getAnnotationMirrors()) {
+            if (annotationMirror.getAnnotationType().getKind() == TypeKind.ERROR) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public static void generateAggregatingClass(
             String aggregatingPackage,
@@ -90,6 +105,65 @@ public final class Processors {
         addGeneratedAnnotation(builder, env, generatedAnnotationClass);
 
         JavaFile.builder(name.packageName(), builder.build()).build().writeTo(env.getFiler());
+    }
+
+    //当前module节点是否需要实例化:module节点中的bindingMethod方法既不是static就是也不是abstract修饰，并且module不是 Kotlin compainionObject类型。
+    public static boolean requiresModuleInstance(Elements elements, TypeElement module) {
+        // Binding methods that lack ABSTRACT or STATIC require module instantiation.
+        // Required by Dagger.  See b/31489617.
+        return ElementFilter.methodsIn(elements.getAllMembers(module)).stream()
+                //element节点中的bindingMethod方法使用了@Binds或@Multibinds或@Provides或@BindsOptionalOf修饰
+                .filter(Processors::isBindingMethod)
+                .map(ExecutableElement::getModifiers)
+                //bindingMethod方法没有使用abstract也没用使用static修饰的实体方法
+                .anyMatch(modifiers -> !modifiers.contains(ABSTRACT) && !modifiers.contains(STATIC))
+                // TODO(erichang): Getting a new KotlinMetadataUtil each time isn't great here, but until
+                // we have some sort of dependency management it will be difficult to share the instance.
+                //不是koltlin compainionObject方法
+                && !KotlinMetadataUtils.getMetadataUtil().isObjectOrCompanionObjectClass(module);
+    }
+
+    private static boolean isBindingMethod(ExecutableElement method) {
+        return hasAnnotation(method, ClassNames.PROVIDES)
+                || hasAnnotation(method, ClassNames.BINDS)
+                || hasAnnotation(method, ClassNames.BINDS_OPTIONAL_OF)
+                || hasAnnotation(method, ClassNames.MULTIBINDS);
+    }
+
+    /**
+     * Returns true if the given method is annotated with one of the annotations Dagger recognizes
+     * for abstract methods (e.g. @Binds).
+     */
+    public static boolean hasDaggerAbstractMethodAnnotation(ExecutableElement method) {
+        return hasAnnotation(method, ClassNames.BINDS)
+                || hasAnnotation(method, ClassNames.BINDS_OPTIONAL_OF)
+                || hasAnnotation(method, ClassNames.MULTIBINDS)
+                || hasAnnotation(method, ClassNames.CONTRIBUTES_ANDROID_INJECTOR);
+    }
+
+    public static Optional<TypeElement> getOriginatingTestElement(
+            Element element, Elements elements) {
+        TypeElement topLevelType = getOriginatingTopLevelType(element, elements);
+        //如果topLevelType使用@HiltAndroidTest注解修饰，返回topLevelType类型
+        return hasAnnotation(topLevelType, ClassNames.HILT_ANDROID_TEST)
+                ? Optional.of(asType(topLevelType))
+                : Optional.empty();
+    }
+
+    private static TypeElement getOriginatingTopLevelType(Element element, Elements elements) {
+        //当前element所在顶级类（在上一级就是包了）
+        TypeElement topLevelType = getTopLevelType(element);
+        //element所在顶级类使用了@OriginatingElement注解修饰，则使用@OriginatingElement注解的topLevelClass方法中的类型；否则使用当前顶级类
+        if (hasAnnotation(topLevelType, ClassNames.ORIGINATING_ELEMENT)) {
+            return getOriginatingTopLevelType(
+                    getAnnotationClassValue(
+                            elements,
+                            getAnnotationMirror(topLevelType, ClassNames.ORIGINATING_ELEMENT),
+                            "topLevelClass"),
+                    elements);
+        }
+
+        return topLevelType;
     }
 
     /**

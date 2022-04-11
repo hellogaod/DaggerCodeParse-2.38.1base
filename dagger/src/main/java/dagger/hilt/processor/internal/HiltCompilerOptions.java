@@ -29,6 +29,13 @@ public final class HiltCompilerOptions {
     }
 
     /**
+     * Returns {@code true} if the check for {@link dagger.hilt.InstallIn} is disabled.
+     */
+    public static boolean isModuleInstallInCheckDisabled(ProcessingEnvironment env) {
+        return BooleanOption.DISABLE_MODULES_HAVE_INSTALL_IN_CHECK.get(env);
+    }
+
+    /**
      * Returns {@code true} if fragment code should use the fixed getContext() behavior where it
      * correctly returns null after a fragment is removed. This fixed behavior matches the behavior
      * of a regular fragment and can help catch issues where a removed or leaked fragment is

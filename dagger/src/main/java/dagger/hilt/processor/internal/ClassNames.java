@@ -21,6 +21,11 @@ public final class ClassNames {
     public static final ClassName SINGLETON_COMPONENT =
             get("dagger.hilt.components", "SingletonComponent");
 
+    public static final ClassName DISABLE_INSTALL_IN_CHECK =
+            get("dagger.hilt.migration", "DisableInstallInCheck");
+
+    public static final ClassName DEFINE_COMPONENT = get("dagger.hilt", "DefineComponent");
+
     public static final ClassName TEST_APPLICATION_COMPONENT_MANAGER =
             get("dagger.hilt.android.internal.testing", "TestApplicationComponentManager");
     public static final ClassName TEST_APPLICATION_COMPONENT_MANAGER_HOLDER =
@@ -37,6 +42,9 @@ public final class ClassNames {
 
     public static final ClassName BINDS =
             get("dagger", "Binds");
+
+    public static final ClassName CONTRIBUTES_ANDROID_INJECTOR =
+            get("dagger.android", "ContributesAndroidInjector");
 
     public static final ClassName INTO_MAP = get("dagger.multibindings", "IntoMap");
     public static final ClassName INTO_SET = get("dagger.multibindings", "IntoSet");
@@ -77,7 +85,23 @@ public final class ClassNames {
     public static final ClassName HILT_ANDROID_APP =
             get("dagger.hilt.android", "HiltAndroidApp");
 
+    public static final ClassName ENTRY_POINT =
+            get("dagger.hilt", "EntryPoint");
+    public static final ClassName EARLY_ENTRY_POINT = get("dagger.hilt.android", "EarlyEntryPoint");
+    public static final ClassName COMPONENT_ENTRY_POINT =
+            get("dagger.hilt.internal", "ComponentEntryPoint");
+
+    public static final ClassName TEST_INSTALL_IN = get("dagger.hilt.testing", "TestInstallIn");
+
     public static final ClassName APPLICATION = get("android.app", "Application");
+    public static final ClassName APPLICATION_CONTEXT_MODULE =
+            get("dagger.hilt.android.internal.modules", "ApplicationContextModule");
+
+    public static final ClassName BINDS_OPTIONAL_OF =
+            get("dagger", "BindsOptionalOf");
+    public static final ClassName MULTIBINDS =
+            get("dagger.multibindings", "Multibinds");
+
     private ClassNames() {
     }
 }
