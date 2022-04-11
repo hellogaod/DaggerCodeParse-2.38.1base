@@ -10,6 +10,8 @@ import static com.squareup.javapoet.ClassName.get;
  */
 public final class ClassNames {
 
+    public static final ClassName ALIAS_OF = get("dagger.hilt.migration", "AliasOf");
+
     public static final ClassName INSTALL_IN =
             get("dagger.hilt", "InstallIn");
     public static final ClassName INJECT =
@@ -20,6 +22,11 @@ public final class ClassNames {
     public static final ClassName CONTEXT = get("android.content", "Context");
     public static final ClassName SINGLETON_COMPONENT =
             get("dagger.hilt.components", "SingletonComponent");
+
+    public static final ClassName ALIAS_OF_PROPAGATED_DATA =
+            get("dagger.hilt.internal.aliasof", "AliasOfPropagatedData");
+    public static final String ALIAS_OF_PROPAGATED_DATA_PACKAGE =
+            "dagger.hilt.processor.internal.aliasof.codegen";
 
     public static final ClassName DISABLE_INSTALL_IN_CHECK =
             get("dagger.hilt.migration", "DisableInstallInCheck");
