@@ -1,6 +1,8 @@
 package dagger.hilt.processor.internal;
 
 
+import com.google.common.collect.ImmutableSet;
+
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -13,6 +15,34 @@ import javax.lang.model.element.TypeElement;
  */
 // TODO(danysantiago): Consider consolidating with Dagger compiler options logic.
 public final class HiltCompilerOptions {
+    /**
+     * Returns {@code true} of unit tests should try to share generated components, rather than using
+     * separate generated components per Hilt test root.
+     *
+     * <p>Tests that provide their own test bindings (e.g. using {@link
+     * dagger.hilt.android.testing.BindValue} or a test {@link dagger.Module}) cannot use the shared
+     * component. In these cases, a component will be generated for the test.
+     */
+    public static boolean isSharedTestComponentsEnabled(ProcessingEnvironment env) {
+        return BooleanOption.SHARE_TEST_COMPONENTS.get(env);
+    }
+
+    /**
+     * Returns {@code true} if cross-compilation root validation is disabled.
+     *
+     * <p>This flag should rarely be needed, but may be used for legacy/migration purposes if
+     * tests require the use of {@link dagger.hilt.android.HiltAndroidApp} rather than
+     * {@link dagger.hilt.android.testing.HiltAndroidTest}.
+     *
+     * <p>Note that Hilt still does validation within a single compilation unit. In particular,
+     * a compilation unit that contains a {@code HiltAndroidApp} usage cannot have other
+     * {@code HiltAndroidApp} or {@code HiltAndroidTest} usages in the same compilation unit.
+     */
+    public static boolean isCrossCompilationRootValidationDisabled(
+            ImmutableSet<TypeElement> rootElements, ProcessingEnvironment env) {
+        BooleanOption option = BooleanOption.DISABLE_CROSS_COMPILATION_ROOT_VALIDATION;
+        return option.get(env);
+    }
 
     /**
      * Returns {@code true} if the superclass validation is disabled for

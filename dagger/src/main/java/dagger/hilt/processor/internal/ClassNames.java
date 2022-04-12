@@ -9,8 +9,78 @@ import static com.squareup.javapoet.ClassName.get;
  * Holder for commonly used class names.
  */
 public final class ClassNames {
+    public static final ClassName HASH_MAP = get("java.util", "HashMap");
+    public static final ClassName HASH_SET = get("java.util", "HashSet");
+    public static final ClassName COLLECTIONS = get("java.util", "Collections");
+    public static final ClassName ARRAYS = get("java.util", "Arrays");
+
+    public static final ClassName TEST_COMPONENT_DATA =
+            get("dagger.hilt.android.internal.testing", "TestComponentData");
+
+    public static final ClassName TEST_COMPONENT_DATA_SUPPLIER =
+            get("dagger.hilt.android.internal.testing", "TestComponentDataSupplier");
+
+    public static final ClassName SUBCOMPONENT_BUILDER =
+            get("dagger", "Subcomponent", "Builder");
+
+    public static final ClassName COMPONENT_BUILDER = get("dagger", "Component", "Builder");
+    public static final ClassName COMPONENT = get("dagger", "Component");
+
+    public static final ClassName SUBCOMPONENT = get("dagger", "Subcomponent");
+
+    public static final ClassName APPLICATION_PROVIDER =
+            get("androidx.test.core.app", "ApplicationProvider");
+
+    public static final ClassName TEST_SINGLETON_COMPONENT =
+            get("dagger.hilt.internal", "TestSingletonComponent");
+    public static final ClassName GENERATED_COMPONENT =
+            get("dagger.hilt.internal", "GeneratedComponent");
+
+    public static final String AGGREGATED_UNINSTALL_MODULES_PACKAGE =
+            "dagger.hilt.android.internal.uninstallmodules.codegen";
+    public static final ClassName AGGREGATED_UNINSTALL_MODULES =
+            get("dagger.hilt.android.internal.uninstallmodules", "AggregatedUninstallModules");
+
+
+    public static final ClassName UNINSTALL_MODULES =
+            get("dagger.hilt.android.testing", "UninstallModules");
+
+    public static final ClassName AGGREGATED_DEPS =
+            get("dagger.hilt.processor.internal.aggregateddeps", "AggregatedDeps");
+
+    public static final String PROCESSED_ROOT_SENTINEL_PACKAGE =
+            "dagger.hilt.internal.processedrootsentinel.codegen";
+    public static final ClassName PROCESSED_ROOT_SENTINEL =
+            get("dagger.hilt.internal.processedrootsentinel", "ProcessedRootSentinel");
+
+    public static final ClassName ROOT_PROCESSOR =
+            get("dagger.hilt.processor.internal.root", "RootProcessor");
+
+    public static final ClassName AGGREGATED_ELEMENT_PROXY =
+            get("dagger.hilt.android.internal.legacy", "AggregatedElementProxy");
+
+    public static final ClassName COMPONENT_TREE_DEPS =
+            get("dagger.hilt.internal.componenttreedeps", "ComponentTreeDeps");
+
+    public static final String AGGREGATED_ROOT_PACKAGE =
+            "dagger.hilt.internal.aggregatedroot.codegen";
+    public static final ClassName AGGREGATED_ROOT =
+            get("dagger.hilt.internal.aggregatedroot", "AggregatedRoot");
+
+
+    public static final ClassName DEFAULT_ROOT =
+            ClassName.get("dagger.hilt.android.internal.testing.root", "Default");
+
+    public static final ClassName MULTI_DEX_APPLICATION =
+            get("androidx.multidex", "MultiDexApplication");
+
+    public static final ClassName ANDROID_ENTRY_POINT =
+            get("dagger.hilt.android", "AndroidEntryPoint");
 
     public static final ClassName ALIAS_OF = get("dagger.hilt.migration", "AliasOf");
+
+    public static final ClassName INTERNAL_TEST_ROOT =
+            get("dagger.hilt.android.internal.testing", "InternalTestRoot");
 
     public static final ClassName DEFINE_COMPONENT_BUILDER =
             get("dagger.hilt", "DefineComponent", "Builder");

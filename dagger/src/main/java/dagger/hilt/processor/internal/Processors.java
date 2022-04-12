@@ -8,7 +8,9 @@ import com.google.common.base.CaseFormat;
 import com.google.common.base.Equivalence;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedHashMultimap;
@@ -73,6 +75,38 @@ public final class Processors {
     public static final String STATIC_INITIALIZER_NAME = "<clinit>";
 
     private static final String JAVA_CLASS = "java.lang.Class";
+
+    public static ImmutableSet<ClassName> toClassNames(Iterable<TypeElement> elements) {
+        return FluentIterable.from(elements).transform(ClassName::get).toSet();
+    }
+
+    /**
+     * Removes the string {@code suffix} from the simple name of {@code type} and returns it.
+     *
+     * @throws BadInputException if the simple name of {@code type} does not end with {@code suffix}
+     */
+    public static ClassName removeNameSuffix(TypeElement type, String suffix) {
+        ClassName originalName = ClassName.get(type);
+        String originalSimpleName = originalName.simpleName();
+        ProcessorErrors.checkState(originalSimpleName.endsWith(suffix),
+                type, "Name of type %s must end with '%s'", originalName, suffix);
+        String withoutSuffix =
+                originalSimpleName.substring(0, originalSimpleName.length() - suffix.length());
+        return originalName.peerClass(withoutSuffix);
+    }
+
+    /**
+     * Returns a map from {@link AnnotationMirror} attribute name to {@link AnnotationValue}s
+     */
+    public static ImmutableMap<String, AnnotationValue> getAnnotationValues(Elements elements,
+                                                                            AnnotationMirror annotation) {
+        ImmutableMap.Builder<String, AnnotationValue> annotationMembers = ImmutableMap.builder();
+        for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> e
+                : elements.getElementValuesWithDefaults(annotation).entrySet()) {
+            annotationMembers.put(e.getKey().getSimpleName().toString(), e.getValue());
+        }
+        return annotationMembers.build();
+    }
 
     /**
      * Returns true if the given element has an annotation that is an error kind.
