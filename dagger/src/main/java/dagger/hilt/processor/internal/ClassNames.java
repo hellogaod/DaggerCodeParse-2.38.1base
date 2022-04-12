@@ -15,6 +15,13 @@ public final class ClassNames {
     public static final ClassName DEFINE_COMPONENT_BUILDER =
             get("dagger.hilt", "DefineComponent", "Builder");
 
+    public static final ClassName GENERATES_ROOT_INPUT = get("dagger.hilt", "GeneratesRootInput");
+    public static final ClassName GENERATES_ROOT_INPUT_PROPAGATED_DATA =
+            get("dagger.hilt.internal.generatesrootinput", "GeneratesRootInputPropagatedData");
+
+    public static final ClassName PRODUCTION_COMPONENT =
+            get("dagger.producers", "ProductionComponent");
+
     public static final ClassName DEFINE_COMPONENT_NO_PARENT =
             get("dagger.hilt.internal.definecomponent", "DefineComponentNoParent");
 
@@ -33,6 +40,10 @@ public final class ClassNames {
             get("dagger.hilt.internal.aliasof", "AliasOfPropagatedData");
     public static final String ALIAS_OF_PROPAGATED_DATA_PACKAGE =
             "dagger.hilt.processor.internal.aliasof.codegen";
+    public static final String AGGREGATED_EARLY_ENTRY_POINT_PACKAGE =
+            "dagger.hilt.android.internal.earlyentrypoint.codegen";
+    public static final ClassName AGGREGATED_EARLY_ENTRY_POINT =
+            get("dagger.hilt.android.internal.earlyentrypoint", "AggregatedEarlyEntryPoint");
 
     public static final String DEFINE_COMPONENT_CLASSES_PACKAGE =
             "dagger.hilt.processor.internal.definecomponent.codegen";

@@ -44,10 +44,11 @@ final class AggregatedDepsGenerator {
         this.processingEnv = processingEnv;
     }
 
+    //hilt_aggregated_deps包下
 //    //This class should only be referenced by generated code!This class aggregates information across multiple compilations.
 //    @AggregatedDeps()
 //    @Generated("AggregatedDepsGenerator")
-//    public class hilt_aggregated_deps_ $CLASS{}
+//    public class $CLASS{}
     void generate() throws IOException {
         Processors.generateAggregatingClass(
                 AGGREGATING_PACKAGE, aggregatedDepsAnnotation(), dependency, getClass(), processingEnv);
