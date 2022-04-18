@@ -48,13 +48,16 @@ class ComponentTreeDepsIrCreator private constructor(
   }
 
   private fun testComponents(): Set<ComponentTreeDepsIr> {
+
     val rootsUsingSharedComponent = rootsUsingSharedComponent(aggregatedRoots)
     val aggregatedRootsByRoot = aggregatedRoots.associateBy { it.root }
+
     val aggregatedDepsByRoot = aggregatedDepsByRoot(
       aggregatedRoots = aggregatedRoots,
       rootsUsingSharedComponent = rootsUsingSharedComponent,
       hasEarlyEntryPoints = aggregatedEarlyEntryPointDeps.isNotEmpty()
     )
+
     val uninstallModuleDepsByRoot =
       aggregatedUninstallModulesDeps.associate { it.test to it.fqName }
     return mutableSetOf<ComponentTreeDepsIr>().apply {
@@ -88,6 +91,7 @@ class ComponentTreeDepsIrCreator private constructor(
               } else {
                 setOf(aggregatedRootsByRoot.getValue(root).fqName)
               },
+
             defineComponentDeps = defineComponentDeps.map { it.fqName }.toSet(),
             aliasOfDeps = aliasOfDeps.map { it.fqName }.toSet(),
             aggregatedDeps = aggregatedDepsByRoot.getOrElse(root) { emptySet() },
@@ -108,10 +112,15 @@ class ComponentTreeDepsIrCreator private constructor(
     if (!isSharedTestComponentsEnabled) {
       return emptySet()
     }
+    //收集：
+    //1. hilt_aggregated_deps包下使用@AggregatedDeps修饰的节点生成的对象获取@AggregatedDeps#test（ 必须先筛选@AggregatedDeps#modules不为空）
+    //2.dagger.hilt.android.internal.uninstallmodules.codegen包下使用@AggregatedUninstallModules修饰的节点，@AggregatedUninstallModules#test中的节点
     val hasLocalModuleDependencies: Set<ClassName> = mutableSetOf<ClassName>().apply {
       addAll(aggregatedDeps.filter { it.module != null }.mapNotNull { it.test })
       addAll(aggregatedUninstallModulesDeps.map { it.test })
     }
+
+    //hilt_aggregated_deps包下使用@AggregatedDeps(@AggregatedRoot#rootAnnotation使用的是@HiltAndroidTest或@InternalTestRoot)修饰的节点生成的对象,该节点不存在于hasLocalModuleDependencies集合中
     return roots
       .filter { it.isTestRoot && it.allowsSharingComponent }
       .map { it.root }
@@ -243,6 +252,7 @@ class ComponentTreeDepsIrCreator private constructor(
       aggregatedUninstallModulesDeps,
       aggregatedEarlyEntryPointDeps
     ).let { producer ->
+      //@AggregatedRoot#rootAnnotation中的注解如果是@HiltAndroidTest或@InternalTestRoot
       if (isTest) {
         producer.testComponents()
       } else {

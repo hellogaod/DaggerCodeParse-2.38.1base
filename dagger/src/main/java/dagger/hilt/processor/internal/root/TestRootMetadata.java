@@ -49,11 +49,14 @@ abstract class TestRootMetadata {
 
         TypeElement baseElement =
                 env.getElementUtils().getTypeElement(ClassNames.MULTI_DEX_APPLICATION.toString());
+
+        //1. @HiltAndroidTest或@InternalTestRoot修饰的节点不允许使用@AndroidEntryPoint修饰；
         ProcessorErrors.checkState(
                 !Processors.hasAnnotation(element, ClassNames.ANDROID_ENTRY_POINT),
                 element,
                 "Tests cannot be annotated with @AndroidEntryPoint. Please use @HiltAndroidTest");
 
+        //2. test节点必须使用@HiltAndroidTest修饰。
         ProcessorErrors.checkState(
                 Processors.hasAnnotation(element, ClassNames.HILT_ANDROID_TEST),
                 element,

@@ -28,13 +28,18 @@ import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSet;
 @AutoValue
 abstract class ProcessedRootSentinelMetadata {
 
-    /** Returns the aggregating element */
+    /**
+     * Returns the aggregating element
+     */
     public abstract TypeElement aggregatingElement();
 
-    /** Returns the processed root elements. */
+    /**
+     * Returns the processed root elements.
+     */
     abstract ImmutableSet<TypeElement> rootElements();
 
     static ImmutableSet<ProcessedRootSentinelMetadata> from(Elements elements) {
+        //dagger.hilt.internal.processedrootsentinel.codegen包下使用@ProcessedRootSentinel注解修饰的节点
         return AggregatedElements.from(
                 ClassNames.PROCESSED_ROOT_SENTINEL_PACKAGE,
                 ClassNames.PROCESSED_ROOT_SENTINEL,
@@ -58,6 +63,8 @@ abstract class ProcessedRootSentinelMetadata {
         ImmutableMap<String, AnnotationValue> values =
                 Processors.getAnnotationValues(elements, annotationMirror);
 
+        //aggregatingElement:dagger.hilt.internal.processedrootsentinel.codegen包下使用@ProcessedRootSentinel注解修饰的节点
+        //rootElements:@ProcessedRootSentinel注解的roots值
         return new AutoValue_ProcessedRootSentinelMetadata(
                 element,
                 AnnotationValues.getStrings(values.get("roots")).stream()

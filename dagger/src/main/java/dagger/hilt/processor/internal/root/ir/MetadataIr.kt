@@ -25,80 +25,81 @@ import com.squareup.javapoet.ClassName
  * reality is that exactly only one value will be present in one of those arrays.
  */
 data class AggregatedDepsIr(
-  val fqName: ClassName,
-  val components: List<ClassName>,
-  val test: ClassName?,
-  val replaces: List<ClassName>,
-  val module: ClassName?,
-  val entryPoint: ClassName?,
-  val componentEntryPoint: ClassName?,
+    val fqName: ClassName,
+    val components: List<ClassName>,
+    val test: ClassName?,
+    val replaces: List<ClassName>,
+    val module: ClassName?,
+    val entryPoint: ClassName?,
+    val componentEntryPoint: ClassName?,
 )
 
 /** Represents [dagger.hilt.android.internal.earlyentrypoint.AggregatedEarlyEntryPoint] */
 data class AggregatedEarlyEntryPointIr(
-  val fqName: ClassName,
-  val earlyEntryPoint: ClassName,
+    val fqName: ClassName,
+    val earlyEntryPoint: ClassName,
 )
 
 /** Represents [dagger.hilt.android.internal.legacy.AggregatedElementProxy] */
 data class AggregatedElementProxyIr(
-  val fqName: ClassName,
-  val value: ClassName,
+    val fqName: ClassName,
+    val value: ClassName,
 )
 
 /** Represents [dagger.hilt.internal.aggregatedroot.AggregatedRoot] */
 data class AggregatedRootIr(
-  val fqName: ClassName,
-  val root: ClassName,
-  val originatingRoot: ClassName,
-  val rootAnnotation: ClassName,
-  // External property from the annotation that indicates if root can use a shared component.
-  val allowsSharingComponent: Boolean = true
+    val fqName: ClassName,
+    val root: ClassName,
+    val originatingRoot: ClassName,
+    val rootAnnotation: ClassName,
+    // External property from the annotation that indicates if root can use a shared component.
+    val allowsSharingComponent: Boolean = true
 ) {
-  // Equivalent to RootType.isTestRoot()
-  val isTestRoot = TEST_ROOT_ANNOTATIONS.contains(rootAnnotation.toString())
+    // Equivalent to RootType.isTestRoot()
+    //@AggregatedRoot#rootAnnotation中的注解如果是@HiltAndroidTest或@InternalTestRoot
+    val isTestRoot = TEST_ROOT_ANNOTATIONS.contains(rootAnnotation.toString())
 
-  companion object {
-    private val TEST_ROOT_ANNOTATIONS = listOf(
-      "dagger.hilt.android.testing.HiltAndroidTest",
-      "dagger.hilt.android.internal.testing.InternalTestRoot",
-    )
-  }
+    companion object {
+        private val TEST_ROOT_ANNOTATIONS = listOf(
+            "dagger.hilt.android.testing.HiltAndroidTest",
+            "dagger.hilt.android.internal.testing.InternalTestRoot",
+        )
+    }
 }
 
 /** Represents [dagger.hilt.android.internal.uninstallmodules.AggregatedUninstallModules] */
 data class AggregatedUninstallModulesIr(
-  val fqName: ClassName,
-  val test: ClassName,
-  val uninstallModules: List<ClassName>
+    val fqName: ClassName,
+    val test: ClassName,
+    val uninstallModules: List<ClassName>
 )
 
 /** Represents [dagger.hilt.internal.aliasof.AliasOfPropagatedData] */
 data class AliasOfPropagatedDataIr(
-  val fqName: ClassName,
-  val defineComponentScope: ClassName,
-  val alias: ClassName,
+    val fqName: ClassName,
+    val defineComponentScope: ClassName,
+    val alias: ClassName,
 )
 
 /** Represents [dagger.hilt.internal.componenttreedeps.ComponentTreeDeps] */
 data class ComponentTreeDepsIr(
-  val name: ClassName,
-  val rootDeps: Set<ClassName>,
-  val defineComponentDeps: Set<ClassName>,
-  val aliasOfDeps: Set<ClassName>,
-  val aggregatedDeps: Set<ClassName>,
-  val uninstallModulesDeps: Set<ClassName>,
-  val earlyEntryPointDeps: Set<ClassName>,
+    val name: ClassName,
+    val rootDeps: Set<ClassName>,
+    val defineComponentDeps: Set<ClassName>,
+    val aliasOfDeps: Set<ClassName>,
+    val aggregatedDeps: Set<ClassName>,
+    val uninstallModulesDeps: Set<ClassName>,
+    val earlyEntryPointDeps: Set<ClassName>,
 )
 
 /** Represents [dagger.hilt.internal.definecomponent.DefineComponentClasses] */
 data class DefineComponentClassesIr(
-  val fqName: ClassName,
-  val component: ClassName,
+    val fqName: ClassName,
+    val component: ClassName,
 )
 
 /** Represents [dagger.hilt.internal.processedrootsentinel.ProcessedRootSentinel] */
 data class ProcessedRootSentinelIr(
-  val fqName: ClassName,
-  val roots: List<ClassName>
+    val fqName: ClassName,
+    val roots: List<ClassName>
 )

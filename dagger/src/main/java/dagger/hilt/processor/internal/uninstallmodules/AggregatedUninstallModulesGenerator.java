@@ -31,6 +31,11 @@ final class AggregatedUninstallModulesGenerator {
         this.env = env;
     }
 
+    //生成的类在dagger.hilt.android.internal.uninstallmodules.codegen包下
+//    //This class should only be referenced by generated code!This class aggregates information across multiple compilations.
+//    @AggregatedUninstallModules(test = $Class名,uninstallModules = @UninstallModules#value中的节点名称)
+//    @Generated("AggregatedUninstallModulesGenerator")
+//    public class 包"_"拼接$Class{}
     void generate() throws IOException {
         Processors.generateAggregatingClass(
                 ClassNames.AGGREGATED_UNINSTALL_MODULES_PACKAGE,

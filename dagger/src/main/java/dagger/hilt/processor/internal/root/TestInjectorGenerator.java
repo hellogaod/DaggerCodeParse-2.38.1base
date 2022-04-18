@@ -26,12 +26,15 @@ public final class TestInjectorGenerator {
         this.metadata = metadata;
     }
 
+    // @OriginatingElement(topLevelClass = FooTest.class)
     // @GeneratedEntryPoint
     // @InstallIn(SingletonComponent.class)
+    // @Generated("TestInjectorGenerator")
     // public interface FooTest_GeneratedInjector {
-    //   void injectTest(FooTest fooTest);
+    //   public void injectTest(FooTest fooTest);
     // }
     public void generate() throws IOException {
+
         TypeSpec.Builder builder =
                 TypeSpec.interfaceBuilder(metadata.testInjectorName())
                         .addOriginatingElement(metadata.testElement())

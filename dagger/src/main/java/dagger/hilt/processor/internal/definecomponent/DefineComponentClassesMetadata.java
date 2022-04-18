@@ -46,7 +46,9 @@ public abstract class DefineComponentClassesMetadata {
 
     /** Returns metadata for all aggregated elements in the aggregating package. */
     public static ImmutableSet<DefineComponentClassesMetadata> from(Elements elements) {
+
         return from(
+                //dagger.hilt.processor.internal.definecomponent.codegen包下使用@DefineComponentClasses注解的节点生成DefineComponentClassesMetadata对象
                 AggregatedElements.from(
                         ClassNames.DEFINE_COMPONENT_CLASSES_PACKAGE,
                         ClassNames.DEFINE_COMPONENT_CLASSES,
@@ -63,6 +65,7 @@ public abstract class DefineComponentClassesMetadata {
     }
 
     private static DefineComponentClassesMetadata create(TypeElement element, Elements elements) {
+
         AnnotationMirror annotationMirror =
                 Processors.getAnnotationMirror(element, ClassNames.DEFINE_COMPONENT_CLASSES);
 
@@ -72,6 +75,7 @@ public abstract class DefineComponentClassesMetadata {
         String componentName = AnnotationValues.getString(values.get("component"));
         String builderName = AnnotationValues.getString(values.get("builder"));
 
+        // @DefineComponentClasses#component和 @DefineComponentClasses#builder 有且仅有一个存在
         ProcessorErrors.checkState(
                 !(componentName.isEmpty() && builderName.isEmpty()),
                 element,

@@ -42,7 +42,11 @@ import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSet;
 import static javax.lang.model.element.Modifier.PUBLIC;
 import static net.ltgt.gradle.incap.IncrementalAnnotationProcessorType.ISOLATING;
 
-/** Processor that outputs dagger components based on transitive build deps. */
+/**
+ * Processor that outputs dagger components based on transitive build deps.
+ *
+ * 处理@ComponentTreeDeps注解修饰的节点
+ */
 @IncrementalAnnotationProcessor(ISOLATING)
 @AutoService(Processor.class)
 public final class ComponentTreeDepsProcessor extends BaseProcessor {

@@ -11,7 +11,9 @@ import javax.lang.model.element.TypeElement;
 
 import dagger.hilt.processor.internal.ClassNames;
 
-/** Metadata for a root element that can trigger the {@link RootProcessor}. */
+/**
+ * Metadata for a root element that can trigger the {@link RootProcessor}.
+ */
 @AutoValue
 abstract class Root {
     /**
@@ -33,16 +35,22 @@ abstract class Root {
         return new AutoValue_Root(rootElement, rootElement, /*isTestRoot=*/ true);
     }
 
-    /** Creates a {@plainlink Root root} for the given {@plainlink Element element}. */
+    /**
+     * Creates a {@plainlink Root root} for the given {@plainlink Element element}.
+     */
     static Root create(Element element, ProcessingEnvironment env) {
+
         TypeElement rootElement = MoreElements.asType(element);
         if (ClassNames.DEFAULT_ROOT.equals(ClassName.get(rootElement))) {
+            //如果当前类是Default类
             return createDefaultRoot(env);
         }
         return new AutoValue_Root(rootElement, rootElement, RootType.of(rootElement).isTestRoot());
     }
 
-    /** Returns the root element that should be used with processing. */
+    /**
+     * Returns the root element that should be used with processing.
+     */
     abstract TypeElement element();
 
     /**
@@ -51,15 +59,21 @@ abstract class Root {
      */
     abstract TypeElement originatingRootElement();
 
-    /** Returns {@code true} if this is a test root. */
+    /**
+     * Returns {@code true} if this is a test root.
+     */
     abstract boolean isTestRoot();
 
-    /** Returns the class name of the root element. */
+    /**
+     * Returns the class name of the root element.
+     */
     ClassName classname() {
         return ClassName.get(element());
     }
 
-    /** Returns the class name of the originating root element. */
+    /**
+     * Returns the class name of the originating root element.
+     */
     ClassName originatingRootClassname() {
         return ClassName.get(originatingRootElement());
     }
@@ -69,7 +83,9 @@ abstract class Root {
         return originatingRootElement().toString();
     }
 
-    /** Returns {@code true} if this uses the default root. */
+    /**
+     * Returns {@code true} if this uses the default root.
+     */
     boolean isDefaultRoot() {
         return classname().equals(ClassNames.DEFAULT_ROOT);
     }

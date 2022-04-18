@@ -34,6 +34,12 @@ final class ComponentTreeDepsGenerator {
         this.env = env;
     }
 
+
+    //dagger.hilt.internal.aggregatedroot.codegen包下
+//    @ComponentTreeDeps(rootDeps = _com_aregyan_github_Application.class,aggregatedDeps = [_com_aregyan_github_Application_GeneratedInjector.class,_com_aregyan_github_di_DatabaseModule.class,_com_aregyan_github_di_NetworkModule.class,_com_aregyan_github_MainActivity_GeneratedInjector.class,_com_aregyan_github_views_userDetails_UserDetailsFragment_GeneratedInjector.class,_com_aregyan_github_views_userDetails_UserDetailsViewModel_HiltModules_BindsModule.class,_com_aregyan_github_views_userDetails_UserDetailsViewModel_HiltModules_KeyModule.class,_com_aregyan_github_views_userList_UserListFragment_GeneratedInjector.class,_com_aregyan_github_views_userList_UserListViewModel_HiltModules_BindsModule.class,_com_aregyan_github_views_userList_UserListViewModel_HiltModules_KeyModule.class] )
+//    @Generated("RootProcessor")
+//    class com_aregyan_github_Application_ComponentTreeDeps{
+//    }
     void generate(ComponentTreeDepsMetadata metadata) throws IOException {
         ClassName name = metadata.name();
         TypeSpec.Builder builder =

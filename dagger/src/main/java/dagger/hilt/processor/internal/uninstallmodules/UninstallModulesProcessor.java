@@ -23,7 +23,9 @@ import dagger.hilt.processor.internal.Processors;
 import static dagger.internal.codegen.extension.DaggerStreams.toImmutableList;
 import static net.ltgt.gradle.incap.IncrementalAnnotationProcessorType.ISOLATING;
 
-/** Validates {@link dagger.hilt.android.testing.UninstallModules} usages. */
+/**
+ * Validates {@link dagger.hilt.android.testing.UninstallModules} usages.
+ */
 @IncrementalAnnotationProcessor(ISOLATING)
 @AutoService(Processor.class)
 public final class UninstallModulesProcessor extends BaseProcessor {
@@ -37,6 +39,7 @@ public final class UninstallModulesProcessor extends BaseProcessor {
     public void processEach(TypeElement annotation, Element element) throws Exception {
         // TODO(bcorso): Consider using RootType to check this?
         // TODO(bcorso): Loosen this restriction to allow defining sets of ignored modules in libraries.
+        //1. @UninstallModules修饰的节点必须是类或接口，还必须同时使用@HiltAndroidTest修饰；
         ProcessorErrors.checkState(
                 MoreElements.isType(element)
                         && Processors.hasAnnotation(element, ClassNames.HILT_ANDROID_TEST),
@@ -53,7 +56,10 @@ public final class UninstallModulesProcessor extends BaseProcessor {
                         Processors.getAnnotationMirror(testElement, ClassNames.UNINSTALL_MODULES),
                         "value");
 
+        //2. @UninstallModules#value里面的节点必须使用@Module 和 @InstallIn 同时修饰；
         checkModulesHaveInstallIn(testElement, uninstallModules);
+
+        //3. @UninstallModules#value中的节点所在顶级节点（当前节点如果在上面是包，那么当前节点就是顶级节点）不允许使用@HiltAndroidTest修饰；
         checkModulesDontOriginateFromTest(testElement, uninstallModules);
 
         new AggregatedUninstallModulesGenerator(testElement, uninstallModules, getProcessingEnv())

@@ -51,6 +51,7 @@ abstract class AggregatedRootMetadata {
 
     static ImmutableSet<AggregatedRootMetadata> from(ProcessingEnvironment env) {
         return from(
+                //dagger.hilt.internal.aggregatedroot.codegen包下使用@AggregatedRoot修饰的节点
                 AggregatedElements.from(
                         ClassNames.AGGREGATED_ROOT_PACKAGE, ClassNames.AGGREGATED_ROOT, env.getElementUtils()),
                 env);
@@ -83,6 +84,8 @@ abstract class AggregatedRootMetadata {
         TypeElement rootElement =
                 env.getElementUtils().getTypeElement(AnnotationValues.getString(values.get("root")));
         boolean allowSharingComponent = true;
+        //dagger.hilt.internal.aggregatedroot.codegen包下使用@AggregatedRoot修饰的节点,
+        // 以及@AggregatedRoot#root中的节点、@AggregatedRoot#originatingRoot中的节点、@AggregatedRoot#rootAnnotation中的节点，
         return new AutoValue_AggregatedRootMetadata(
                 element,
                 rootElement,

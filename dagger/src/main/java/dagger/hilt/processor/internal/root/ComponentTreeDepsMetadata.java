@@ -57,7 +57,9 @@ abstract class ComponentTreeDepsMetadata {
     abstract ImmutableSet<TypeElement> aggregatedEarlyEntryPointDeps();
 
     static ComponentTreeDepsMetadata from(TypeElement element, Elements elements) {
+
         checkArgument(Processors.hasAnnotation(element, ClassNames.COMPONENT_TREE_DEPS));
+
         AnnotationMirror annotationMirror =
                 Processors.getAnnotationMirror(element, ClassNames.COMPONENT_TREE_DEPS);
 

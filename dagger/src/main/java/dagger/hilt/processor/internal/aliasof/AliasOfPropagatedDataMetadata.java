@@ -26,15 +26,20 @@ import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSet;
 @AutoValue
 public abstract class AliasOfPropagatedDataMetadata {
 
-    /** Returns the aggregating element */
+    /**
+     * Returns the aggregating element
+     */
     public abstract TypeElement aggregatingElement();
 
     abstract TypeElement defineComponentScopeElement();
 
     abstract TypeElement aliasElement();
 
-    /** Returns metadata for all aggregated elements in the aggregating package. */
+    /**
+     * Returns metadata for all aggregated elements in the aggregating package.
+     */
     public static ImmutableSet<AliasOfPropagatedDataMetadata> from(Elements elements) {
+        //dagger.hilt.processor.internal.aliasof.codegen包下使用@AliasOfPropagatedData修饰的节点生成的对象
         return from(
                 AggregatedElements.from(
                         ClassNames.ALIAS_OF_PROPAGATED_DATA_PACKAGE,
@@ -43,7 +48,9 @@ public abstract class AliasOfPropagatedDataMetadata {
                 elements);
     }
 
-    /** Returns metadata for each aggregated element. */
+    /**
+     * Returns metadata for each aggregated element.
+     */
     public static ImmutableSet<AliasOfPropagatedDataMetadata> from(
             ImmutableSet<TypeElement> aggregatedElements, Elements elements) {
         return aggregatedElements.stream()

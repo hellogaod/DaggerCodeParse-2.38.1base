@@ -45,6 +45,7 @@ dependencies {
     // https://mvnrepository.com/artifact/com.google.devtools.ksp/symbol-processing-api
     implementation "com.google.devtools.ksp:symbol-processing-api:1.5.31-1.0.0"
 
+    implementation 'javax.annotation:javax.annotation-api:1.3.2'
 
     implementation 'com.google.auto.service:auto-service:1.0-rc5'
     annotationProcessor "com.google.auto.service:auto-service:1.0-rc5"

@@ -45,7 +45,11 @@ import static net.ltgt.gradle.incap.IncrementalAnnotationProcessorType.AGGREGATI
 import static net.ltgt.gradle.incap.IncrementalAnnotationProcessorType.DYNAMIC;
 import static net.ltgt.gradle.incap.IncrementalAnnotationProcessorType.ISOLATING;
 
-/** Processor that outputs dagger components based on transitive build deps. */
+/**
+ * Processor that outputs dagger components based on transitive build deps.
+ * <p>
+ * 集中处理@HiltAndroidApp、@HiltAndroidTest和@InternalTestRoot三种注解
+ */
 @IncrementalAnnotationProcessor(DYNAMIC)
 @AutoService(Processor.class)
 public final class RootProcessor extends BaseProcessor {
@@ -82,13 +86,16 @@ public final class RootProcessor extends BaseProcessor {
         // TODO(bcorso): Move this logic into a separate isolating processor to avoid regenerating it
         // for unrelated changes in Gradle.
         RootType rootType = RootType.of(rootElement);
+
         if (rootType.isTestRoot()) {
             new TestInjectorGenerator(
                     getProcessingEnv(), TestRootMetadata.of(getProcessingEnv(), rootElement))
                     .generate();
         }
+
         TypeElement originatingRootElement =
                 Root.create(rootElement, getProcessingEnv()).originatingRootElement();
+
         new AggregatedRootGenerator(rootElement, originatingRootElement, annotation, getProcessingEnv())
                 .generate();
     }
@@ -98,6 +105,7 @@ public final class RootProcessor extends BaseProcessor {
         if (!useAggregatingRootProcessor(getProcessingEnv())) {
             return;
         }
+
         Set<Element> newElements = generatesRootInputs.getElementsToWaitFor(roundEnv);
         if (processed) {
             checkState(
@@ -117,6 +125,7 @@ public final class RootProcessor extends BaseProcessor {
             // Generate an @ComponentTreeDeps for each unique component tree.
             ComponentTreeDepsGenerator componentTreeDepsGenerator =
                     new ComponentTreeDepsGenerator(getProcessingEnv());
+
             for (ComponentTreeDepsMetadata metadata : componentTreeDepsMetadatas(rootsToProcess)) {
                 componentTreeDepsGenerator.generate(metadata);
             }
@@ -129,16 +138,24 @@ public final class RootProcessor extends BaseProcessor {
         }
     }
 
+    //@AggregatedRoot#root的值筛选出不存在与@ProcessedRootSentinel#roots
     private ImmutableSet<AggregatedRootIr> rootsToProcess() {
+
+        //fqName:dagger.hilt.internal.processedrootsentinel.codegen包下使用@ProcessedRootSentinel注解修饰的节点
+        //roots:@ProcessedRootSentinel注解的roots值
         ImmutableSet<ProcessedRootSentinelIr> processedRoots =
                 ProcessedRootSentinelMetadata.from(getElementUtils()).stream()
                         .map(ProcessedRootSentinelMetadata::toIr)
                         .collect(toImmutableSet());
+
+        //dagger.hilt.internal.aggregatedroot.codegen包下使用@AggregatedRoot修饰的节点,
+        // 以及@AggregatedRoot#root中的节点、@AggregatedRoot#originatingRoot中的节点、@AggregatedRoot#rootAnnotation中的节点，
         ImmutableSet<AggregatedRootIr> aggregatedRoots =
                 AggregatedRootMetadata.from(processingEnv).stream()
                         .map(AggregatedRootMetadata::toIr)
                         .collect(toImmutableSet());
 
+        //false
         boolean isCrossCompilationRootValidationDisabled =
                 isCrossCompilationRootValidationDisabled(
                         aggregatedRoots.stream()
@@ -156,22 +173,27 @@ public final class RootProcessor extends BaseProcessor {
 
     private ImmutableSet<ComponentTreeDepsMetadata> componentTreeDepsMetadatas(
             ImmutableSet<AggregatedRootIr> aggregatedRoots) {
+
         ImmutableSet<DefineComponentClassesIr> defineComponentDeps =
                 DefineComponentClassesMetadata.from(getElementUtils()).stream()
                         .map(DefineComponentClassesMetadata::toIr)
                         .collect(toImmutableSet());
+
         ImmutableSet<AliasOfPropagatedDataIr> aliasOfDeps =
                 AliasOfPropagatedDataMetadata.from(getElementUtils()).stream()
                         .map(AliasOfPropagatedDataMetadata::toIr)
                         .collect(toImmutableSet());
+
         ImmutableSet<AggregatedDepsIr> aggregatedDeps =
                 AggregatedDepsMetadata.from(getElementUtils()).stream()
                         .map(AggregatedDepsMetadata::toIr)
                         .collect(toImmutableSet());
+
         ImmutableSet<AggregatedUninstallModulesIr> aggregatedUninstallModulesDeps =
                 AggregatedUninstallModulesMetadata.from(getElementUtils()).stream()
                         .map(AggregatedUninstallModulesMetadata::toIr)
                         .collect(toImmutableSet());
+
         ImmutableSet<AggregatedEarlyEntryPointIr> aggregatedEarlyEntryPointDeps =
                 AggregatedEarlyEntryPointMetadata.from(getElementUtils()).stream()
                         .map(AggregatedEarlyEntryPointMetadata::toIr)
@@ -181,13 +203,21 @@ public final class RootProcessor extends BaseProcessor {
         boolean isTest = aggregatedRoots.stream().anyMatch(AggregatedRootIr::isTestRoot);
         Set<ComponentTreeDepsIr> componentTreeDeps =
                 ComponentTreeDepsIrCreator.components(
+                        //@AggregatedRoot#rootAnnotation中的注解如果是@HiltAndroidTest或@InternalTestRoot
                         isTest,
+                        //false
                         isSharedTestComponentsEnabled(processingEnv),
+                        //dagger.hilt.internal.aggregatedroot.codegen包下使用@AggregatedRoot（@AggregatedRoot#root的值筛选出不存在与@ProcessedRootSentinel#roots）修饰的节点生成的AggregatedRootIr对象
                         aggregatedRoots,
+                        //dagger.hilt.processor.internal.definecomponent.codegen包下使用@DefineComponentClasses注解的节点生成对象
                         defineComponentDeps,
+                        //dagger.hilt.processor.internal.aliasof.codegen包下使用@AliasOfPropagatedData修饰的节点生成的对象
                         aliasOfDeps,
+                        //hilt_aggregated_deps包下使用@AggregatedDeps修饰的节点生成的对象
                         aggregatedDeps,
+                        //dagger.hilt.android.internal.uninstallmodules.codegen包下使用@AggregatedUninstallModules修饰的节点生成对象
                         aggregatedUninstallModulesDeps,
+                        //dagger.hilt.android.internal.earlyentrypoint.codegen包下使用@AggregatedEarlyEntryPoint修饰的节点生成对象
                         aggregatedEarlyEntryPointDeps);
         return componentTreeDeps.stream()
                 .map(it -> ComponentTreeDepsMetadata.from(it, getElementUtils()))
