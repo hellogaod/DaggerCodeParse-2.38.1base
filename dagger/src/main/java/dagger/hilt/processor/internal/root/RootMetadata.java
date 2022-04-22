@@ -31,7 +31,9 @@ import static javax.lang.model.element.Modifier.ABSTRACT;
 import static javax.lang.model.element.Modifier.PRIVATE;
 import static javax.lang.model.element.Modifier.STATIC;
 
-/** Contains metadata about the given hilt root. */
+/**
+ * Contains metadata about the given hilt root.
+ */
 public final class RootMetadata {
     private static final ClassName APPLICATION_CONTEXT_MODULE =
             ClassName.get("dagger.hilt.android.internal.modules", "ApplicationContextModule");
@@ -101,6 +103,9 @@ public final class RootMetadata {
         return deps.modules().get(componentName);
     }
 
+    //(1)当前component节点在ComponentDependencies对象的entryPointsBuilder属性中匹配；
+    //(2)GeneratedComponent;
+    //(3)当前component节点；
     public ImmutableSet<TypeName> entryPoints(ClassName componentName) {
         return ImmutableSet.<TypeName>builder()
                 .addAll(
@@ -154,8 +159,13 @@ public final class RootMetadata {
 
         // Only test modules in the application component can be missing default constructor
         for (ComponentDescriptor componentDescriptor : componentTree.getComponentDescriptors()) {
+
             ClassName componentName = componentDescriptor.component();
+
+            //@AggregatedDeps#modules节点 不包括ApplicationContextModule，
             for (TypeElement extraModule : modulesThatDaggerCannotConstruct(componentName)) {
+
+                //1. @HiltAndroidTest或@InternalTestRoot测试，那么@DefineComponent修饰的节点只能使用SingletonComponent；
                 if (root.isTestRoot() && !componentName.equals(ClassNames.SINGLETON_COMPONENT)) {
                     env.getMessager()
                             .printMessage(
@@ -199,6 +209,7 @@ public final class RootMetadata {
             return true;
         }
 
+        //！static修饰的内部类 && ！不存在abstrac修饰的bindingMethod方法 && （只存在@Provides和static修饰的方法 || public修饰的无参构造函数）
         return !isInnerClass(type)
                 && !hasNonDaggerAbstractMethod(type)
                 && (hasOnlyStaticProvides(type) || hasVisibleEmptyConstructor(type));

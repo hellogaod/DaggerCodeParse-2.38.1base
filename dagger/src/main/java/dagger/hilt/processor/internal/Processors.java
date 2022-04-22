@@ -83,6 +83,8 @@ public final class Processors {
     /**
      * Removes the string {@code suffix} from the simple name of {@code type} and returns it.
      *
+     * 当前节点名称去掉suffix后缀得到的新名称表示的类
+     *
      * @throws BadInputException if the simple name of {@code type} does not end with {@code suffix}
      */
     public static ClassName removeNameSuffix(TypeElement type, String suffix) {

@@ -75,7 +75,7 @@ public final class GeneratesRootInputs {
         //dagger.hilt.processor.internal.generatesrootinput.codegen包下
         PackageElement packageElement = elements.getPackageElement(AGGREGATING_PACKAGE);
 
-        //以下目前都不存在不必细看。
+        //
         if (packageElement == null) {
             return ImmutableList.of();
         }

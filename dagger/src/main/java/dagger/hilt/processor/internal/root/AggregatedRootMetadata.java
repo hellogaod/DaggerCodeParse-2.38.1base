@@ -26,10 +26,14 @@ import static dagger.internal.codegen.extension.DaggerStreams.toImmutableSet;
 @AutoValue
 abstract class AggregatedRootMetadata {
 
-    /** Returns the aggregating element */
+    /**
+     * Returns the aggregating element
+     */
     public abstract TypeElement aggregatingElement();
 
-    /** Returns the element that was annotated with the root annotation. */
+    /**
+     * Returns the element that was annotated with the root annotation.
+     */
     abstract TypeElement rootElement();
 
     /**
@@ -38,10 +42,14 @@ abstract class AggregatedRootMetadata {
      */
     abstract TypeElement originatingRootElement();
 
-    /** Returns the root annotation as an element. */
+    /**
+     * Returns the root annotation as an element.
+     */
     abstract TypeElement rootAnnotation();
 
-    /** Returns whether this root can use a shared component. */
+    /**
+     * Returns whether this root can use a shared component.
+     */
     abstract boolean allowsSharingComponent();
 
     @Memoized
@@ -57,7 +65,9 @@ abstract class AggregatedRootMetadata {
                 env);
     }
 
-    /** Returns metadata for each aggregated element. */
+    /**
+     * Returns metadata for each aggregated element.
+     */
     public static ImmutableSet<AggregatedRootMetadata> from(
             ImmutableSet<TypeElement> aggregatedElements, ProcessingEnvironment env) {
         return aggregatedElements.stream()

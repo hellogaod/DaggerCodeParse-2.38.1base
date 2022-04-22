@@ -27,7 +27,9 @@ import dagger.hilt.processor.internal.Processors;
 import static dagger.internal.codegen.extension.DaggerStreams.toImmutableList;
 import static java.util.Comparator.comparing;
 
-/** Generates a Dagger component or subcomponent interface. */
+/**
+ * Generates a Dagger component or subcomponent interface.
+ */
 final class ComponentGenerator {
     private static final Joiner JOINER = Joiner.on(".");
     private static final Comparator<ClassName> SIMPLE_NAME_SORTER =
@@ -36,13 +38,28 @@ final class ComponentGenerator {
     private static final Comparator<TypeName> TYPE_NAME_SORTER = comparing(TypeName::toString);
 
     private final ProcessingEnvironment processingEnv;
+    //component节点作为$CLASS_HiltComponents内部类
     private final ClassName name;
+    //为空
     private final Optional<ClassName> superclass;
+    //(1)component节点在ComponentDependencies对象中modulesBuilder；(2)component节点的子节点拼接"BuilderModule"生成的接口；
     private final ImmutableList<ClassName> modules;
+    //(1)当前component节点在ComponentDependencies对象的entryPointsBuilder属性中匹配；
+    //(2)GeneratedComponent;
+    //(3)当前component节点；
     private final ImmutableList<TypeName> entryPoints;
+    //当前component节点上使用的@Scope修饰的注解
     private final ImmutableCollection<ClassName> scopes;
+    //空的
     private final ImmutableList<AnnotationSpec> extraAnnotations;
+    //如果是是SingletonComponent使用Component，否则使用Subcomponent；
     private final ClassName componentAnnotation;
+
+    //如果descriptor.creator存在，那么生成一个接口
+//    @(Sub)Component.Builder
+//    static interface Builder implements creator{
+//
+//    }
     private final Optional<TypeSpec> componentBuilder;
 
     public ComponentGenerator(
@@ -86,7 +103,9 @@ final class ComponentGenerator {
         return builder;
     }
 
-    /** Returns the component annotation with the list of modules to install for the component. */
+    /**
+     * Returns the component annotation with the list of modules to install for the component.
+     */
     private AnnotationSpec getComponentAnnotation() {
         AnnotationSpec.Builder builder = AnnotationSpec.builder(componentAnnotation);
         modules.forEach(module -> builder.addMember("modules", "$T.class", module));
@@ -95,7 +114,7 @@ final class ComponentGenerator {
 
     /**
      * Adds entry points to the component.
-     *
+     * <p>
      * See b/140979968. If the entry points exceed 65763 bytes, we have to partition them to avoid the
      * limit. To be safe, we split at 60000 bytes.
      */

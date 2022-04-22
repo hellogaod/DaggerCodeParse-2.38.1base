@@ -18,12 +18,16 @@ public final class AliasOfs {
     public static AliasOfs create(
             ImmutableSet<AliasOfPropagatedDataMetadata> metadatas,
             ImmutableSet<ComponentDescriptor> componentDescriptors) {
+
+        //@DefineComponent修饰的节点同时使用的@Scope修饰的注解修饰
         ImmutableSet<ClassName> defineComponentScopes =
                 componentDescriptors.stream()
                         .flatMap(descriptor -> descriptor.scopes().stream())
                         .collect(toImmutableSet());
 
         ImmutableSetMultimap.Builder<ClassName, ClassName> builder = ImmutableSetMultimap.builder();
+
+        //@AliasOfPropagatedData#defineComponentScope中的节点一定存在于： @DefineComponent修饰的节点同时使用的@Scope修饰的注解修饰
         metadatas.forEach(
                 metadata -> {
                     ClassName defineComponentScopeName =
@@ -41,6 +45,7 @@ public final class AliasOfs {
         return new AliasOfs(builder.build());
     }
 
+    // k:@AliasOfPropagatedData#defineComponentScope中的节点,v:@AliasOfPropagatedData#alias中的节点（@AliasOf修饰的节点）
     private final ImmutableSetMultimap<ClassName, ClassName> defineComponentScopeToAliases;
 
     private AliasOfs(ImmutableSetMultimap<ClassName, ClassName> defineComponentScopeToAliases) {

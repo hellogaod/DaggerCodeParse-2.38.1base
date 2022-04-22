@@ -454,7 +454,7 @@ public abstract class AndroidEntryPointMetadata {
                 new Type(
                         AndroidClassNames.FRAGMENT_COMPONENT,//FragmentComponent接口
                         AndroidType.FRAGMENT,
-                        AndroidClassNames.FRAGMENT_COMPONENT_MANAGER,//FragmentComponentBuilderEntryPoint类
+                        AndroidClassNames.FRAGMENT_COMPONENT_MANAGER,//FragmentComponentManager类
                         CodeBlock.of("this"));
         private static final Type VIEW =
                 new Type(

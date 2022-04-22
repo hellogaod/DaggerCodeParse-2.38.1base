@@ -19,16 +19,23 @@ import dagger.hilt.processor.internal.ComponentDescriptor;
 
 import static dagger.internal.codegen.extension.DaggerStreams.toImmutableList;
 
-/** A representation of the full tree of scopes. */
+/**
+ * A representation of the full tree of scopes.
+ */
 final class ComponentTree {
     private final ImmutableGraph<ComponentDescriptor> graph;
     private final ComponentDescriptor root;
 
-    /** Creates a new tree from a set of descriptors. */
+    /**
+     * Creates a new tree from a set of descriptors.
+     */
     static ComponentTree from(Set<ComponentDescriptor> descriptors) {
+        //生成的图形不允许有自循环存在。
         MutableGraph<ComponentDescriptor> graph =
                 GraphBuilder.directed().allowsSelfLoops(false).build();
 
+        //有向图节点：当前ComponentDescriptor对象
+        //有向边：当前ComponentDescriptor对象存在父ComponentDescriptor对象 指向当前ComponentDescriptor对象；
         descriptors.forEach(
                 descriptor -> {
                     graph.addNode(descriptor);

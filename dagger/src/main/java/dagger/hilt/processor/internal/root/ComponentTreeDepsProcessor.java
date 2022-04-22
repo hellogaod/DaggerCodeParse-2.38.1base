@@ -88,8 +88,12 @@ public final class ComponentTreeDepsProcessor extends BaseProcessor {
             ClassName renamedRoot = Processors.removeNameSuffix(metadataElement, "_ComponentTreeDeps");
             ComponentNames componentNames = ComponentNames.withRenaming(rootName -> renamedRoot);
 
+            //如果是Default类
             boolean isDefaultRoot = ClassNames.DEFAULT_ROOT.equals(renamedRoot);
+
+            //@AggregatedRoot#root中的节点生成Root对象
             ImmutableSet<Root> roots =
+                    //metadata.aggregatedRootDeps():dagger.hilt.internal.aggregatedroot.codegen包下使用@AggregatedRoot修饰的节点;
                     AggregatedRootMetadata.from(metadata.aggregatedRootDeps(), processingEnv).stream()
                             .map(AggregatedRootMetadata::rootElement)
                             .map(rootElement -> Root.create(rootElement, getProcessingEnv()))
@@ -108,7 +112,9 @@ public final class ComponentTreeDepsProcessor extends BaseProcessor {
                     defineComponents.getComponentDescriptors(
                             DefineComponentClassesMetadata.from(
                                     metadata.defineComponentDeps(), getElementUtils()));
+
             ComponentTree tree = ComponentTree.from(componentDescriptors);
+
             ComponentDependencies deps =
                     ComponentDependencies.from(
                             componentDescriptors,
@@ -118,10 +124,12 @@ public final class ComponentTreeDepsProcessor extends BaseProcessor {
                             AggregatedEarlyEntryPointMetadata.from(
                                     metadata.aggregatedEarlyEntryPointDeps(), getElementUtils()),
                             getElementUtils());
+
             AliasOfs aliasOfs =
                     AliasOfs.create(
                             AliasOfPropagatedDataMetadata.from(metadata.aliasOfDeps(), getElementUtils()),
                             componentDescriptors);
+
             RootMetadata rootMetadata =
                     RootMetadata.create(root, tree, deps, aliasOfs, getProcessingEnv());
 

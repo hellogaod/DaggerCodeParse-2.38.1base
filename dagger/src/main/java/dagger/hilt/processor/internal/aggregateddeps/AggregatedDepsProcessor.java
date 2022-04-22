@@ -390,6 +390,7 @@ public final class AggregatedDepsProcessor extends BaseProcessor {
                 //当前节点嵌套在（或源自）的@HiltAndroidTest修饰的节点ClassName类型
                 Optional<ClassName> testName =
                         Processors.getOriginatingTestElement(element, getElementUtils()).map(ClassName::get);
+
                 new AggregatedDepsGenerator(
                         key, element, testName, components, replacedModules, getProcessingEnv())
                         .generate();

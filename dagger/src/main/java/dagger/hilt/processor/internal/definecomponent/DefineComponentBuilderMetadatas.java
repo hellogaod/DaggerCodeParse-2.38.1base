@@ -127,7 +127,7 @@ final class DefineComponentBuilderMetadatas {
                         .filter(method -> !TypeName.get(method.getReturnType()).equals(ClassName.get(builder)))
                         .collect(Collectors.toList());
 
-        //6. builder接口中的方法要么是build方法，要么是static修饰的方法，要么方法返回类型是builder接口类型；
+        //6. builder接口中的方法要么是build方法，要么方法返回类型是builder接口类型，要么是返回类型是Builder接口的方法，要么是static修饰的方法；
         ProcessorErrors.checkState(
                 nonStaticNonBuilderMethods.isEmpty(),
                 nonStaticNonBuilderMethods,

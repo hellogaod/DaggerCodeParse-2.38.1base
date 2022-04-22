@@ -35,9 +35,12 @@ public final class DefineComponents {
     private final DefineComponentBuilderMetadatas componentBuilderMetadatas =
             DefineComponentBuilderMetadatas.create(componentMetadatas);
 
-    private DefineComponents() {}
+    private DefineComponents() {
+    }
 
-    /** Returns the {@link ComponentDescriptor} for the given component element. */
+    /**
+     * Returns the {@link ComponentDescriptor} for the given component element.
+     */
     // TODO(b/144940889): This descriptor doesn't contain the "creator" or the "installInName".
     public ComponentDescriptor componentDescriptor(Element element) {
         if (!componentDescriptors.containsKey(element)) {
@@ -62,9 +65,13 @@ public final class DefineComponents {
         return builder.build();
     }
 
-    /** Returns the set of aggregated {@link ComponentDescriptor}s. */
+    /**
+     * Returns the set of aggregated {@link ComponentDescriptor}s.
+     */
     public ImmutableSet<ComponentDescriptor> getComponentDescriptors(
             ImmutableSet<DefineComponentClassesMetadata> aggregatedMetadatas) {
+
+        //筛选出存在@DefineComponentClasses#component中的节点，该节点一定是使用@DefineComponent修饰的，生成DefineComponentMetadata对象。
         ImmutableSet<DefineComponentMetadatas.DefineComponentMetadata> components =
                 aggregatedMetadatas.stream()
                         .filter(DefineComponentClassesMetadata::isComponent)
@@ -72,6 +79,7 @@ public final class DefineComponents {
                         .map(componentMetadatas::get)
                         .collect(toImmutableSet());
 
+        //筛选出存在@DefineComponentClasses#builder中的节点，该节点一定是使用@DefineComponent.Builder修饰的，生成DefineComponentBuilderMetadata对象。
         ImmutableSet<DefineComponentBuilderMetadatas.DefineComponentBuilderMetadata> builders =
                 aggregatedMetadatas.stream()
                         .filter(DefineComponentClassesMetadata::isComponentBuilder)
@@ -79,10 +87,13 @@ public final class DefineComponents {
                         .map(componentBuilderMetadatas::get)
                         .collect(toImmutableSet());
 
+        //@DefineComponent.Builder修饰的接口生成的Map， K：@DefineComponent.Builder修饰的接口的build方法返回类型生成的对象 ；V：@DefineComponent.Builder修饰的接口生成对象。
         ListMultimap<DefineComponentMetadatas.DefineComponentMetadata, DefineComponentBuilderMetadatas.DefineComponentBuilderMetadata> builderMultimap =
                 ArrayListMultimap.create();
+
         builders.forEach(builder -> builderMultimap.put(builder.componentMetadata(), builder));
 
+        //如果有多个@DefineComponent.Builder修饰的接口，那么这些接口的build方法返回类型不允许相同。
         // Check that there are not multiple builders per component
         for (DefineComponentMetadatas.DefineComponentMetadata componentMetadata : builderMultimap.keySet()) {
             TypeElement component = componentMetadata.component();
