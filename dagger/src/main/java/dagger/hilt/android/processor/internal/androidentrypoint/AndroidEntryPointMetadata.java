@@ -280,7 +280,7 @@ public abstract class AndroidEntryPointMetadata {
                 isAndroidSuperclassValidationDisabled(androidEntryPointElement, env)
                         && MoreTypes.isTypeOf(Void.class, androidEntryPointClassValue.asType());
 
-        if (requiresBytecodeInjection) {
+        if (requiresBytecodeInjection) {//默认true
             //baseElement表示当前@HiltAndroidApp或@AndroidEntryPoint注解修饰的类的父级类节点
             baseElement = MoreElements.asType(env.getTypeUtils().asElement(androidEntryPointElement.getSuperclass()));
             // If this AndroidEntryPoint is a Kotlin class and its base type is also Kotlin and has
@@ -348,9 +348,9 @@ public abstract class AndroidEntryPointMetadata {
             Type type = Type.of(androidEntryPointElement, baseElement);
             return manuallyConstruct(
                     androidEntryPointElement,//@HiltAndroidApp或@AndroidEntryPoint注解修饰的节点
-                    baseElement,//可能是androidEntryPointElement的父级节点，也可能是@HiltAndroidApp或@AndroidEntryPoint注解的value值节点
+                    baseElement,//默认是androidEntryPointElement的父级节点（也可能是@HiltAndroidApp或@AndroidEntryPoint注解的value值节点）
                     generatedClassName,//Hilt_$CLASS,$CLASS表示androidEntryPointElement节点类型
-                    requiresBytecodeInjection,
+                    requiresBytecodeInjection,//默认true
                     type.androidType,//修饰的节点，Activity，Application
                     Optional.empty(),
                     ImmutableSet.of(type.component),

@@ -53,7 +53,7 @@ public final class AndroidEntryPointProcessor extends BaseProcessor {
                 // in the same build unit. Thus, we only generate the application here if we're using the
                 // aggregating root processor. If we're using the Hilt Gradle plugin's aggregating task, we
                 // need to generate the application within ComponentTreeDepsProcessor instead.
-                if (useAggregatingRootProcessor(getProcessingEnv())) {//启用了聚合处理器，默认true
+                if (useAggregatingRootProcessor(getProcessingEnv())) {//启用了聚合处理器，虽然默认是true，但是hilt项目应该通过其他指令导致当前 = false
                     // While we could always generate the application in ComponentTreeDepsProcessor, even if
                     // we're using the aggregating root processor, it can lead to extraneous errors when
                     // things fail before ComponentTreeDepsProcessor runs so we generate it here to avoid that

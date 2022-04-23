@@ -40,7 +40,7 @@ public final class ApplicationGenerator {
 
     //A generated base class to be extended by the @HiltAndroidApp annotated class. If using the Gradle plugin, this is swapped as the base class via bytecode transformation.
     // @Generated("ApplicationGenerator")
-    // abstract class Hilt_$APP extends $BASE implements GeneratedComponentManagerHolder{
+    //public abstract class Hilt_Application extends Application implements GeneratedComponentManagerHolder{
     //   ...
     // }
     public void generate() throws IOException {
@@ -79,16 +79,7 @@ public final class ApplicationGenerator {
     }
 
     // private final ApplicationComponentManager componentManager =
-    //     new ApplicationComponentManager(
-    //      new ComponentSupplier() {
-    //          @Override
-    //          public Object get() {
-    //           return DaggerSingletonComponent.builder()
-    //               .applicationContextModule(new ApplicationContextModule(Hilt_$APP.this))
-    //              .build();
-    //           }
-    //       }
-    //     );
+    //     new ApplicationComponentManager(...);
     private FieldSpec componentManagerField() {
         ParameterSpec managerParam = metadata.componentManagerParam();
         return FieldSpec.builder(managerParam.type, managerParam.name)
@@ -113,8 +104,8 @@ public final class ApplicationGenerator {
     // new ComponentSupplier() {
     //   @Override
     //   public Object get() {
-    //     return DaggerSingletonComponent.builder()
-    //         .applicationContextModule(new ApplicationContextModule(Hilt_$APP.this))
+    //     return Dagger_com_aregyan_github_Application_HiltComponents_SingletonComponent.builder()
+    //         .applicationContextModule(new ApplicationContextModule(Hilt_Application.this))
     //         .build();
     //   }
     // }
