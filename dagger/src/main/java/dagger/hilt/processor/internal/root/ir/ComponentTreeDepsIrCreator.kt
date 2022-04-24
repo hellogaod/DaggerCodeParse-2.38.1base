@@ -79,6 +79,7 @@ class ComponentTreeDepsIrCreator private constructor(
           } else {
             ComponentTreeDepsNameGenerator()
           }
+
         add(
           ComponentTreeDepsIr(
             name = componentNameGenerator.generate(rootName),

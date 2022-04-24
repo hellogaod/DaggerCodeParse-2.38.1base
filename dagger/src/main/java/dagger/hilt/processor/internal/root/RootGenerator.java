@@ -80,7 +80,7 @@ final class RootGenerator {
         this.root = metadata.root();
     }
 
-    //    //在dagger.hilt.internal.aggregatedroot.codegen包下
+    //    //在com.aregyan.github包下
 //    @Generated("dagger.hilt.processor.internal.root.RootProcessor")
 //    public final class _com_aregyan_github_Application_HiltComponents{
 //        private _com_aregyan_github_Application_HiltComponents(){}

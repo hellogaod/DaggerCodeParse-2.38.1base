@@ -55,7 +55,8 @@ object AggregatedRootIrValidator {
             )
         }
 
-        //2. @AggregatedRoot#root有@HiltAndroidTest或@InternalTestRoot 和 @HiltAndroidApp 不能同时在项目中使用；
+        //2.同一个项目中不允许同时出现@HiltAndroidTest或@InternalTestRoot 和 @HiltAndroidApp；
+        // - 可以理解为@HiltAndroidApp应用于项目，@HiltAndroidTest或@InternalTestRoot应用于测试环境；
         if (testRootsToProcess.isNotEmpty() && appRootsToProcess.isNotEmpty()) {
             throw InvalidRootsException(
                 """
@@ -69,13 +70,13 @@ object AggregatedRootIrValidator {
         // Perform validation across roots previous compilation units.
         if (!isCrossCompilationRootValidationDisabled) {
 
-            //@AggregatedRoot#rootAnnotation中的注解如果是@HiltAndroidTest或@InternalTestRoot && @AggregatedRoot#root包含在@ProcessedRootSentinel#roots中
+            //@AggregatedRoot#rootAnnotation中的注解如果是@HiltAndroidTest或@InternalTestRoot ,并且当前注解已经被处理过了。
             val alreadyProcessedTestRoots = aggregatedRoots.filter {
                 it.isTestRoot && processedRootNames.contains(it.root)
             }
 
             // TODO(b/185742783): Add an explanation or link to docs to explain why we're forbidding this.
-            //3. 如果@AggregatedRoot#rootAnnotation中的注解是@HiltAndroidTest或@InternalTestRoot && @AggregatedRoot#root包含在@ProcessedRootSentinel#roots中 ，并且@AggregatedRoot#roo筛选出不存在与@ProcessedRootSentinel#roots的值不为空，那么报错；
+            //3. 如果@AggregatedRoot#rootAnnotation中的注解是@HiltAndroidTest或@InternalTestRoot && @AggregatedRoot#root包含在@ProcessedRootSentinel#roots中（已经被处理过了） ，那么不允许再次处理该注解；
             if (alreadyProcessedTestRoots.isNotEmpty() && rootsToProcess.isNotEmpty()) {
                 throw InvalidRootsException(
                     """
@@ -86,11 +87,12 @@ object AggregatedRootIrValidator {
                 )
             }
 
-            //@AggregatedRoot#rootAnnotation中的注解如果是@HiltAndroidApp && @HiltAndroidApp包含在@ProcessedRootSentinel#roots中
+            //@AggregatedRoot#rootAnnotation中的注解如果是@HiltAndroidApp && @HiltAndroidApp包含在@ProcessedRootSentinel#roots中(已经被处理过了)
             val alreadyProcessedAppRoots = aggregatedRoots.filter {
                 !it.isTestRoot && processedRootNames.contains(it.root)
             }
 
+            //4. @AggregatedRoot#rootAnnotation中的注解如果是@HiltAndroidApp && @HiltAndroidApp包含在@ProcessedRootSentinel#roots中(已经被处理过了)，那么不允许再次在当前项目中处理 @HiltAndroidApp注解；
             if (alreadyProcessedAppRoots.isNotEmpty() && appRootsToProcess.isNotEmpty()) {
                 throw InvalidRootsException(
                     """
