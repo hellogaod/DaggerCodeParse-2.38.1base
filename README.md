@@ -29,14 +29,14 @@
 
 2. `IOC`（控制反转）的用法：
 
-	class A{
-		B b;
+		class A{
+			B b;
 
-		@Inject
-		public A(B b){
-			this.b = b;
-		} 
-	}
+			@Inject
+			public A(B b){
+				this.b = b;
+			} 
+		}
 
 看起来非常简单（好像看起来也挺头疼的哈），实际上有3难：
 
