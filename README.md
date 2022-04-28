@@ -2,6 +2,10 @@
 
 # 前言 #
 
+[Dagger2.38.1版本源码解析（包括Hilt源码解析）系列](https://github.com/hellogaod/DaggerCodeParse-2.38.1base/tree/master/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E7%B3%BB%E5%88%97%E6%96%87%E7%AB%A0)
+
+[Dagger基于2.38.1源码实际应用系列（包括Hilt实际应用）](https://github.com/hellogaod/DaggerCodeParse-2.38.1base/tree/master/Dagger%E5%9F%BA%E4%BA%8E2.38.1%E6%BA%90%E7%A0%81%E7%90%86%E8%A7%A3%E6%B3%A8%E8%A7%A3)
+
 原先研究`Dagger2`源码是基于`2.16`（个人建议该版本代码不用看，太乱，导致阅读难度加大），后来切换到`2.38.1`，因为有了`2.16`的基础并且`2.38.1`版本源码做了一些分类处理，所以理解起来容易很多。
 
 **所以Dagger源码解析是基于`2.38.1`版本**
